@@ -1,21 +1,19 @@
-<div align="center">The Luau Scriptorium
+# The Luau Scriptorium
 
-Â«A curated collection of Luau libraries, source code, references, utilities, and resources.Â»
+*A curated collection of Luau libraries, source code, references, utilities, and resources.*
 
-""Luau" (https://img.shields.io/badge/Language-Luau-2C2D72)" (#)
-""Lua" (https://img.shields.io/badge/Language-Lua-000080)" (#)
-""License" (https://img.shields.io/badge/License-MIT-green)" (LICENSE)
-""Status" (https://img.shields.io/badge/Status-Active-brightgreen)" (#project-status)
+[![Luau](https://img.shields.io/badge/Language-Luau-2C2D72)]()
+[![Lua](https://img.shields.io/badge/Language-Lua-000080)]()
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Status](https://img.shields.io/badge/Status-Active-brightgreen)](#project-status)
 
-<br>" Overview " (#about) Â·
-" Contents " (#contents) Â·
-" Contributing " (#contributing) Â·
-" License " (#license) Â·
-" Contact " (#contact)
+<br>
 
-</div>---
+**Overview** · **Contents** · **Contributing** · **License** · **Contact**
 
-About
+---
+
+## About
 
 The Luau Scriptorium is a centralized collection of Luau-related resources, bringing together libraries, source code, utilities, examples, and technical references in one organized repository.
 
@@ -25,45 +23,38 @@ The repository may contain both original work and third-party material. Ownershi
 
 ---
 
-Contents
+## Contents
 
 The repository may include:
 
-- Luau Libraries â€” Reusable libraries and modules
-- Lua Libraries â€” Lua-based libraries and modules
-- Source Code â€” Collected and organized source material
-- Examples â€” Demonstrations and reference implementations
-- Utilities â€” Helpful tools and scripts
-- Documentation â€” References and technical information
-- Experiments â€” Experimental or research-oriented implementations
+- **Luau Libraries** — Reusable libraries and modules  
+- **Lua Libraries** — Lua-based libraries and modules  
+- **Source Code** — Collected and organized source material  
+- **Examples** — Demonstrations and reference implementations  
+- **Utilities** — Helpful tools and scripts  
+- **Documentation** — References and technical information  
+- **Experiments** — Experimental or research-oriented implementations
 
 ---
 
-âœ¦ Philosophy
+### Philosophy
 
 The Scriptorium is built around a few simple principles:
 
-Organization
-Keep useful resources structured and easy to navigate.
-
-Attribution
-Respect the original creators and their licenses.
-
-Quality
-Prefer useful, understandable, and maintainable material.
-
-Accessibility
-Make Lua and Luau resources easier to discover and learn from.
+- **Organization** — Keep useful resources structured and easy to navigate.  
+- **Attribution** — Respect the original creators and their licenses.  
+- **Quality** — Prefer useful, understandable, and maintainable material.  
+- **Accessibility** — Make Lua and Luau resources easier to discover and learn from.
 
 ---
 
-Sources & Attribution
+## Sources & Attribution
 
 This repository may contain material created by authors other than the maintainer.
 
 Where applicable, original copyright notices, license files, and attribution information should be preserved alongside the relevant material.
 
-Â«Important: Not every file within this repository is necessarily original work.Â»
+**Important: Not every file within this repository is necessarily original work.**
 
 Third-party material remains subject to its original license and copyright.
 
@@ -73,31 +64,31 @@ Always review the license associated with a particular source before redistribut
 
 ---
 
-Contributing
+## Contributing
 
 Contributions are welcome.
 
 Before submitting a contribution:
 
-1. Keep the repository organized.
-2. Preserve existing attribution and license information.
-3. Clearly identify third-party material.
-4. Avoid removing copyright notices.
-5. Keep additions relevant to the purpose of the repository.
-6. Add documentation where appropriate.
+1. Keep the repository organized.  
+2. Preserve existing attribution and license information.  
+3. Clearly identify third-party material.  
+4. Avoid removing copyright notices.  
+5. Keep additions relevant to the purpose of the repository.  
+6. Add documentation where appropriate.  
 7. Ensure that contributed material can legally be redistributed.
 
 ---
 
-License
+## License
 
-Original Content
+**Original Content**
 
 Original material created for The Luau Scriptorium is licensed under the MIT License, unless otherwise stated.
 
-See ""LICENSE"" (LICENSE) for the complete license text.
+See **[LICENSE](LICENSE)** for the complete license text.
 
-Third-Party Content
+**Third-Party Content**
 
 Third-party code, libraries, documentation, and other material remain under their respective licenses.
 
@@ -105,29 +96,35 @@ Their inclusion in this repository does not transfer ownership or licensing righ
 
 ---
 
-Contact
+## Contact
 
 Have a question, suggestion, or something you'd like to discuss?
 
-<div align="center">Discord
+<div align="center">
 
-iamazenin
+**Discord**  
+@iamazenin  
+[1175727232258420786](https://discord.com/users/1175727232258420786)  
 
-"1175727232258420786"
+<br>
+[Message @iamazenin on Discord](https://discord.com/users/1175727232258420786)
 
-<br>" Message @iamazenin on Discord " (https://discord.com/users/1175727232258420786)
+</div>
 
-</div>---
+---
 
-Project Status
+## Project Status
 
-<div align="center">ðŸŸ¢ ACTIVE DEVELOPMENT
+<div align="center">
 
+🟢 **ACTIVE DEVELOPMENT**  
 The Scriptorium is continuously organized and expanded as new resources are added.
 
-</div>---
+</div>
 
-Disclaimer
+---
+
+## Disclaimer
 
 The Luau Scriptorium is provided as an organized collection of resources.
 
@@ -137,10 +134,12 @@ Users are responsible for complying with the applicable licenses and permissions
 
 ---
 
-<div align="center">The Luau Scriptorium
+<div align="center">
 
-Collect Â· Preserve Â· Organize Â· Learn
+**The Luau Scriptorium**  
+*Collect · Preserve · Organize · Learn*
 
-<br>"Maintained by iamazenin"
+<br>
+**Maintained by iamazenin**
 
 </div>
