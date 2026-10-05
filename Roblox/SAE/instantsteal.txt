@@ -1,0 +1,400 @@
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Target Coordinates & Config
+local BYPASS_TARGET_CFRAME = CFrame.new(546.8, 70.6, -364.6)
+local TARGET_PART_NAME = "SpawnLocation"
+local FLOAT_HEIGHT = 6.7 
+local LEG_OFFSET = Vector3.new(0, -FLOAT_HEIGHT, 0)
+local TELEPORT_HEIGHT_OFFSET = Vector3.new(0, FLOAT_HEIGHT, 0)
+
+-- Flight & Control Setup
+local flying = false
+local flySpeed = 50
+local flyConnection = nil
+local flyInputConnection = nil
+local charAddedConnection = nil
+
+-- Instant Hold Duration setup
+for _, prompt in ipairs(Workspace:GetDescendants()) do
+    if prompt:IsA("ProximityPrompt") then 
+        prompt.HoldDuration = 0 
+    end
+end
+
+local promptAddedConnection = Workspace.DescendantAdded:Connect(function(descendant)
+    if descendant:IsA("ProximityPrompt") then 
+        descendant.HoldDuration = 0 
+    end
+end)
+
+-- UI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "StealAnEggGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Main Container (Full Black Theme)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 190, 0, 50)
+MainFrame.Position = UDim2.new(0.5, -95, 0.8, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 2
+MainStroke.Color = Color3.fromRGB(30, 30, 30)
+MainStroke.Parent = MainFrame
+
+-- Drag Handle / Header Label
+local HeaderLabel = Instance.new("TextLabel")
+HeaderLabel.Name = "HeaderLabel"
+HeaderLabel.Size = UDim2.new(0, 145, 0, 42)
+HeaderLabel.Position = UDim2.new(0, 4, 0, 4)
+HeaderLabel.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+HeaderLabel.BorderSizePixel = 0
+HeaderLabel.Text = "STEAL AN EGG"
+HeaderLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+HeaderLabel.TextSize = 13
+HeaderLabel.Font = Enum.Font.SourceSansBold
+HeaderLabel.Parent = MainFrame
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 8)
+HeaderCorner.Parent = HeaderLabel
+
+local HeaderStroke = Instance.new("UIStroke")
+HeaderStroke.Thickness = 1
+HeaderStroke.Color = Color3.fromRGB(30, 30, 30)
+HeaderStroke.Parent = HeaderLabel
+
+-- Dropdown Toggle Button
+local DropdownButton = Instance.new("TextButton")
+DropdownButton.Name = "DropdownButton"
+DropdownButton.Size = UDim2.new(0, 33, 0, 42)
+DropdownButton.Position = UDim2.new(0, 153, 0, 4)
+DropdownButton.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+DropdownButton.BorderSizePixel = 0
+DropdownButton.Text = "▼"
+DropdownButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+DropdownButton.TextSize = 12
+DropdownButton.Font = Enum.Font.SourceSansBold
+DropdownButton.Parent = MainFrame
+
+local DropdownCorner = Instance.new("UICorner")
+DropdownCorner.CornerRadius = UDim.new(0, 8)
+DropdownCorner.Parent = DropdownButton
+
+local DropdownStroke = Instance.new("UIStroke")
+DropdownStroke.Thickness = 1
+DropdownStroke.Color = Color3.fromRGB(30, 30, 30)
+DropdownStroke.Parent = DropdownButton
+
+-- Dropdown Frame
+local DropdownContainer = Instance.new("Frame")
+DropdownContainer.Name = "DropdownContainer"
+DropdownContainer.Size = UDim2.new(0, 190, 0, 125)
+DropdownContainer.Position = UDim2.new(0, 0, 0, 55)
+DropdownContainer.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+DropdownContainer.Visible = false
+DropdownContainer.Parent = MainFrame
+
+local DropContainerCorner = Instance.new("UICorner")
+DropContainerCorner.CornerRadius = UDim.new(0, 10)
+DropContainerCorner.Parent = DropdownContainer
+
+local DropContainerStroke = Instance.new("UIStroke")
+DropContainerStroke.Thickness = 2
+DropContainerStroke.Color = Color3.fromRGB(30, 30, 30)
+DropContainerStroke.Parent = DropdownContainer
+
+-- 1. Bypass Steal Button
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "BypassStealButton"
+ToggleButton.Size = UDim2.new(0, 182, 0, 35)
+ToggleButton.Position = UDim2.new(0, 4, 0, 5)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+ToggleButton.BorderSizePixel = 0
+ToggleButton.Text = "Bypass Steal: OFF"
+ToggleButton.TextColor3 = Color3.fromRGB(150, 150, 150)
+ToggleButton.TextSize = 13
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.Parent = DropdownContainer
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0, 8)
+ButtonCorner.Parent = ToggleButton
+
+local ButtonStroke = Instance.new("UIStroke")
+ButtonStroke.Thickness = 1
+ButtonStroke.Color = Color3.fromRGB(30, 30, 30)
+ButtonStroke.Parent = ToggleButton
+
+-- 2. Server Hop Button
+local HopButton = Instance.new("TextButton")
+HopButton.Name = "HopButton"
+HopButton.Size = UDim2.new(0, 182, 0, 35)
+HopButton.Position = UDim2.new(0, 4, 0, 44)
+HopButton.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+HopButton.BorderSizePixel = 0
+HopButton.Text = "Server Hop: Low"
+HopButton.TextColor3 = Color3.fromRGB(150, 150, 150)
+HopButton.TextSize = 13
+HopButton.Font = Enum.Font.SourceSansBold
+HopButton.Parent = DropdownContainer
+
+local HopCorner = Instance.new("UICorner")
+HopCorner.CornerRadius = UDim.new(0, 8)
+HopCorner.Parent = HopButton
+
+local HopStroke = Instance.new("UIStroke")
+HopStroke.Thickness = 1
+HopStroke.Color = Color3.fromRGB(30, 30, 30)
+HopStroke.Parent = HopButton
+
+-- 3. Destroy GUI Button
+local DestroyButton = Instance.new("TextButton")
+DestroyButton.Name = "DestroyButton"
+DestroyButton.Size = UDim2.new(0, 182, 0, 35)
+DestroyButton.Position = UDim2.new(0, 4, 0, 83)
+DestroyButton.BackgroundColor3 = Color3.fromRGB(20, 0, 0)
+DestroyButton.BorderSizePixel = 0
+DestroyButton.Text = "Destroy GUI"
+DestroyButton.TextColor3 = Color3.fromRGB(200, 60, 60)
+DestroyButton.TextSize = 13
+DestroyButton.Font = Enum.Font.SourceSansBold
+DestroyButton.Parent = DropdownContainer
+
+local DestroyCorner = Instance.new("UICorner")
+DestroyCorner.CornerRadius = UDim.new(0, 8)
+DestroyCorner.Parent = DestroyButton
+
+local DestroyStroke = Instance.new("UIStroke")
+DestroyStroke.Thickness = 1
+DestroyStroke.Color = Color3.fromRGB(50, 10, 10)
+DestroyStroke.Parent = DestroyButton
+
+-- Helper Functions
+local function getHRP()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    return char:WaitForChild("HumanoidRootPart", 5)
+end
+
+-- Flight Engine Logic
+local function startFlyEngine()
+    if flyConnection then flyConnection:Disconnect() end
+
+    flyConnection = RunService.Heartbeat:Connect(function()
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+        local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+
+        if flying and char and hum and rootPart then
+            hum.PlatformStand = true
+            
+            local moveDirection = Vector3.zero
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection += rootPart.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection -= rootPart.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection -= rootPart.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection += rootPart.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection += Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDirection -= Vector3.new(0, 1, 0) end
+
+            rootPart.AssemblyLinearVelocity = Vector3.zero
+            rootPart.AssemblyAngularVelocity = Vector3.zero
+            rootPart.CFrame = rootPart.CFrame + (moveDirection * flySpeed * 0.1)
+        end
+    end)
+end
+
+startFlyEngine()
+
+-- Manual Fly Key Toggle (F Key)
+flyInputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.F then
+        flying = not flying
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+        if hum then
+            hum.PlatformStand = flying
+            if not flying then
+                hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+            end
+        end
+    end
+end)
+
+-- Bypass Steal Logic
+local isTeleporting = false
+local loopConnection = nil
+local canUseSteal = true
+
+local function startTeleporting()
+    local targetPart = Workspace:FindFirstChild(TARGET_PART_NAME, true)
+    if not targetPart or not targetPart:IsA("BasePart") then return end
+    targetPart.CanCollide = false
+    
+    loopConnection = RunService.Heartbeat:Connect(function()
+        local hrp = getHRP()
+        if not isTeleporting or not hrp or not hrp.Parent then return end
+        targetPart.CFrame = hrp.CFrame * CFrame.new(LEG_OFFSET)
+        hrp.CFrame = BYPASS_TARGET_CFRAME + TELEPORT_HEIGHT_OFFSET
+        targetPart.CFrame = BYPASS_TARGET_CFRAME
+    end)
+end
+
+local function stopTeleporting()
+    if loopConnection then 
+        loopConnection:Disconnect() 
+        loopConnection = nil 
+    end
+    local hrp = getHRP()
+    if hrp then
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+    end
+end
+
+ToggleButton.MouseButton1Click:Connect(function()
+    if not canUseSteal and not isTeleporting then return end
+    isTeleporting = not isTeleporting
+    if isTeleporting then
+        canUseSteal = false
+        ToggleButton.Text = "Bypass Steal: ON"
+        ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        startTeleporting()
+    else
+        ToggleButton.Text = "Bypass Steal: OFF"
+        ToggleButton.TextColor3 = Color3.fromRGB(150, 150, 150)
+        stopTeleporting()
+        task.spawn(function()
+            for i = 15, 1, -1 do
+                if isTeleporting then return end
+                ToggleButton.Text = "Wait: " .. string.format("%.1f", i / 10) .. "s"
+                task.wait(0.1)
+            end
+            if not isTeleporting then
+                ToggleButton.Text = "Bypass Steal: OFF"
+                canUseSteal = true
+            end
+        end)
+    end
+end)
+
+-- Smart Server Hop Logic
+local function smartServerHop()
+    HopButton.Text = "Searching..."
+
+    local placeId = game.PlaceId
+    local currentJobId = game.JobId
+    local req = (syn and syn.request) or (http and http.request) or http_request or request
+
+    if not req then
+        HopButton.Text = "Executor Unsupported"
+        task.wait(2)
+        HopButton.Text = "Server Hop: Low"
+        return
+    end
+
+    local success, result = pcall(function()
+        local url = string.format("https://games.roblox.com/v1/games/%d/servers/0?sortOrder=Asc&limit=100", placeId)
+        local response = req({ Url = url, Method = "GET" })
+        return HttpService:JSONDecode(response.Body)
+    end)
+
+    if success and result and result.data then
+        local validServers = {}
+        for _, server in ipairs(result.data) do
+            if server.id ~= currentJobId and server.playing < server.maxPlayers and server.playing > 0 then
+                table.insert(validServers, server)
+            end
+        end
+
+        table.sort(validServers, function(a, b)
+            return a.playing < b.playing
+        end)
+
+        if #validServers > 0 then
+            HopButton.Text = "Teleporting (" .. validServers[1].playing .. " players)"
+            TeleportService:TeleportToPlaceInstance(placeId, validServers[1].id, LocalPlayer)
+        else
+            HopButton.Text = "No Server Found"
+            task.wait(2)
+            HopButton.Text = "Server Hop: Low"
+        end
+    end
+end
+
+HopButton.MouseButton1Click:Connect(function()
+    smartServerHop()
+end)
+
+-- Destroy GUI Logic
+DestroyButton.MouseButton1Click:Connect(function()
+    stopTeleporting()
+    flying = false
+
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+    if hum then
+        hum.PlatformStand = false
+        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+
+    if flyConnection then flyConnection:Disconnect() end
+    if flyInputConnection then flyInputConnection:Disconnect() end
+    if promptAddedConnection then promptAddedConnection:Disconnect() end
+    if charAddedConnection then charAddedConnection:Disconnect() end
+
+    ScreenGui:Destroy()
+end)
+
+DropdownButton.MouseButton1Click:Connect(function()
+    DropdownContainer.Visible = not DropdownContainer.Visible
+    DropdownButton.Text = DropdownContainer.Visible and "▲" or "▼"
+end)
+
+-- Dragging Mechanics
+local dragStd, dragStartStd, startPosStd
+local function enableDragStd(guiObject)
+    guiObject.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragStd = true
+            dragStartStd = input.Position
+            startPosStd = MainFrame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then 
+                    dragStd = false 
+                end
+            end)
+        end
+    end)
+end
+
+enableDragStd(HeaderLabel)
+enableDragStd(DropdownButton)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragStd and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStartStd
+        MainFrame.Position = UDim2.new(startPosStd.X.Scale, startPosStd.X.Offset + delta.X, startPosStd.Y.Scale, startPosStd.Y.Offset + delta.Y)
+    end
+end)
+
+charAddedConnection = LocalPlayer.CharacterAdded:Connect(function()
+    stopTeleporting()
+    task.wait(1)
+    startFlyEngine()
+end)
