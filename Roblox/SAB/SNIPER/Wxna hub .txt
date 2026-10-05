@@ -1,0 +1,1406 @@
+_G.ScriptEnabled = true
+_G.CasingType = "Normal"
+_G.AutoWriteEnabled = false
+_G.AutoSubmitEnabled = false
+
+local enteredCodes = {}
+local activeConnections = {}
+
+local latestCode = nil
+local lastWrittenCode = nil
+local autoWriteConn = nil
+
+local pendingQueue = {}
+local pendingSeen = {}
+local writeBusy = false
+
+local collectedCodes = {}
+local collectedSeen = {}
+local CODE_SEPARATOR = ""
+
+_G.SubmitAfterCount = 1
+_G.SubmitDelay = 0
+_G.SubmitAttempts = 1
+
+local ScreenGui = nil
+local MainFrame = nil
+local PasteLog = nil
+local pasteHistory = {}
+local directRedeemProgress = 0
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+local function logStatus(message)
+    if MainFrame and MainFrame:FindFirstChild("StatusLabel") then
+        MainFrame.StatusLabel.Text = "Status: " .. message
+    end
+end
+
+-- Shows the last pasted/redeemed codes in the bottom activity panel.
+local function logPastedCode(code, current, total)
+    total = math.max(1, tonumber(total) or 1)
+    current = math.clamp(tonumber(current) or 1, 1, total)
+    -- Keep the display chronological: 1/3, then 2/3, then 3/3.
+    table.insert(pasteHistory, string.format("[CODE]  →  %s    %d/%d", tostring(code), current, total))
+    while #pasteHistory > 3 do
+        table.remove(pasteHistory, 1)
+    end
+    if PasteLog and PasteLog.Parent then
+        PasteLog.Text = table.concat(pasteHistory, "\n")
+    end
+end
+
+local function isGuiVisible(obj)
+    if not obj or not obj.Visible then return false end
+    local current = obj.Parent
+    while current do
+        if current:IsA("GuiObject") and not current.Visible then
+            return false
+        elseif current:IsA("ScreenGui") and not current.Enabled then
+            return false
+        end
+        current = current.Parent
+    end
+    return true
+end
+
+local blacklistedWords = {
+    "top", "sec", "min", "fps", "ping", "loading",
+    "points", "coins", "cash", "rebirth", "slaps", "money",
+    "speed", "level", "lvl", "score"
+}
+
+local commonWords = {
+    ["the"]=true, ["and"]=true, ["for"]=true, ["you"]=true, ["your"]=true,
+    ["go"]=true, ["ready"]=true,
+    ["now"]=true, ["new"]=true, ["use"]=true, ["get"]=true, ["out"]=true,
+    ["all"]=true, ["are"]=true, ["can"]=true, ["with"]=true, ["from"]=true,
+    ["this"]=true, ["that"]=true, ["here"]=true, ["more"]=true, ["info"]=true,
+    ["redeem"]=true, ["claim"]=true,
+    ["enter"]=true, ["reward"]=true, ["rewards"]=true, ["update"]=true, ["join"]=true,
+    ["group"]=true, ["like"]=true, ["follow"]=true, ["sub"]=true, ["click"]=true,
+    ["type"]=true, ["copy"]=true, ["paste"]=true, ["server"]=true, ["event"]=true,
+    ["live"]=true, ["news"]=true, ["soon"]=true, ["available"]=true, ["expired"]=true,
+    ["welcome"]=true, ["thanks"]=true, ["thank"]=true, ["player"]=true, ["players"]=true,
+    ["today"]=true, ["time"]=true, ["wait"]=true, ["xp"]=true, ["money"]=true,
+    ["announcement"]=true, ["announcements"]=true, ["release"]=true,
+    ["released"]=true, ["limited"]=true, ["special"]=true, ["gift"]=true, ["pet"]=true,
+    ["pets"]=true, ["egg"]=true, ["luck"]=true, ["boost"]=true, ["double"]=true,
+    ["friend"]=true, ["friends"]=true, ["chat"]=true, ["online"]=true, ["offline"]=true,
+    ["invite"]=true, ["party"]=true, ["voice"]=true, ["report"]=true, ["block"]=true,
+    ["mute"]=true, ["store"]=true, ["shop"]=true, ["inventory"]=true, ["settings"]=true,
+    ["leaderboard"]=true, ["lobby"]=true, ["menu"]=true, ["close"]=true, ["open"]=true,
+    ["back"]=true, ["next"]=true, ["play"]=true, ["exit"]=true, ["loading"]=true,
+    ["negozio"]=true, ["rinascita"]=true, ["indice"]=true, ["duelli"]=true,
+    ["scambio"]=true, ["codici"]=true, ["incremento"]=true, ["amico"]=true,
+    ["drop"]=true, ["present"]=true,
+    ["win"]=true, ["wins"]=true, ["winner"]=true, ["winners"]=true, ["winning"]=true,
+    ["winter"]=true, ["victory"]=true, ["lose"]=true, ["loss"]=true, ["losses"]=true,
+    ["defeat"]=true, ["daily"]=true, ["spin"]=true, ["wheel"]=true, ["prize"]=true,
+    ["bonus"]=true, ["streak"]=true, ["rank"]=true, ["wave"]=true, ["round"]=true,
+    ["score"]=true, ["match"]=true, ["versus"]=true, ["battle"]=true, ["quest"]=true
+}
+
+-- Only these two values were explicitly requested as non-codes.  A game can
+-- use ordinary words as valid codes, so do not maintain a fixed code list.
+local explicitlyIgnoredCodes = { go = true, ready = true, top = true }
+
+local function isBlacklisted(lowerText)
+    if commonWords[lowerText] then return true end
+    for _, word in ipairs(blacklistedWords) do
+        if lowerText:find(word, 1, true) then
+            return true
+        end
+    end
+    return false
+end
+
+local function looksLikeCode(token)
+    if not token then return false end
+    if #token < 2 or #token > 20 then return false end
+    if not token:match("^%w+$") then return false end
+    if isBlacklisted(token:lower()) then return false end
+
+    local letterCount = 0
+    for _ in token:gmatch("%a") do letterCount = letterCount + 1 end
+    if token:match("^%d+[smhdSMHD]$") then return false end
+
+    -- Codes may be letters, numbers, or a mix (e.g. JOHN7, A12B, 1234).
+    -- A digit makes the token eligible even when it has fewer than 3 letters.
+    local hasDigit = token:match("%d") ~= nil
+    if hasDigit then return true end
+
+    local isAllUpper = (token == token:upper()) and (token:match("%a") ~= nil)
+    -- Short uppercase codes such as IS and OP are valid too.
+    return letterCount >= 2 and isAllUpper
+end
+
+local function isLoneCode(text)
+    if not text then return false end
+    text = text:match("^%s*(.-)%s*$")
+    if text == "" or text:find("%s") then return false end
+    if #text > 20 then return false end
+    if not text:match("^%w+$") then return false end
+    -- For a standalone server announcement, accept any code-like word.
+    -- Do not reject it merely because it is an ordinary English word.
+    if explicitlyIgnoredCodes[text:lower()] then return false end
+    if text:match("^%d+[smhdSMHD]$") then return false end
+
+    -- Numeric codes such as "67" are valid too.
+    if text:match("^%d+$") then
+        return #text >= 2
+    end
+    if #text < 3 then return false end
+
+    local letters = 0
+    for _ in text:gmatch("%a") do letters = letters + 1 end
+    return letters >= 2
+end
+
+local function extractCodesFromText(text)
+    local found = {}
+    if not text then return found end
+
+    local trimmed = text:match("^%s*(.-)%s*$")
+    -- Strip RichText tags if present
+    trimmed = trimmed:gsub("<[^>]->", "")
+
+    if isLoneCode(trimmed) then
+        table.insert(found, trimmed)
+        return found
+    end
+
+    for token in text:gmatch("%w+") do
+        if looksLikeCode(token) then
+            table.insert(found, token)
+        end
+    end
+    return found
+end
+
+local function copyCodeToClipboard(code)
+    local formattedCode = code
+    if _G.CasingType == "Upper" then
+        formattedCode = string.upper(code)
+    elseif _G.CasingType == "Lower" then
+        formattedCode = string.lower(code)
+    end
+
+    local success = false
+
+    if setclipboard then
+        pcall(function() setclipboard(formattedCode) end)
+        success = true
+    elseif toclipboard then
+        pcall(function() toclipboard(formattedCode) end)
+        success = true
+    elseif set_clipboard then
+        pcall(function() set_clipboard(formattedCode) end)
+        success = true
+    elseif Clipboard and Clipboard.set then
+        pcall(function() Clipboard.set(formattedCode) end)
+        success = true
+    end
+
+    if success then
+        logStatus("Copied: " .. formattedCode)
+    else
+        logStatus("Error: No clipboard support! " .. formattedCode)
+    end
+
+    return success
+end
+
+local function formatCode(code)
+    if _G.CasingType == "Upper" then
+        return string.upper(code)
+    elseif _G.CasingType == "Lower" then
+        return string.lower(code)
+    end
+    return code
+end
+
+-- Permanently cached TextBox — populated once and kept until removed
+local _cachedBox = nil
+
+local function _isCodeBox(obj)
+    if not obj:IsA("TextBox") then return false end
+    if ScreenGui and obj:IsDescendantOf(ScreenGui) then return false end
+    local hint = ((obj.PlaceholderText or "") .. " " .. obj.Name):lower()
+    return hint:find("code") or hint:find("redeem") or hint:find("here")
+end
+
+local function findCodeTextBox()
+    -- Fast path: cached box still valid
+    if _cachedBox and _cachedBox.Parent and isGuiVisible(_cachedBox) then
+        return _cachedBox
+    end
+    _cachedBox = nil
+    -- Fallback scan (only runs when cache is empty)
+    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if not playerGui then return nil end
+    for _, obj in ipairs(playerGui:GetDescendants()) do
+        if _isCodeBox(obj) then
+            if isGuiVisible(obj) then _cachedBox = obj return obj end
+        end
+    end
+    return nil
+end
+
+local function fireSignal(sig)
+    if not sig then return end
+    pcall(function()
+        if getconnections then
+            for _, c in ipairs(getconnections(sig)) do
+                if c.Fire then c:Fire() end
+            end
+        end
+    end)
+    if firesignal then
+        pcall(function() firesignal(sig) end)
+    end
+end
+
+local function isSubmitButton(obj)
+    if not (obj:IsA("TextButton") or obj:IsA("ImageButton")) then return false end
+    if ScreenGui and obj:IsDescendantOf(ScreenGui) then return false end
+    if not isGuiVisible(obj) then return false end
+    local hint = (((obj:IsA("TextButton") and obj.Text) or "") .. " " .. obj.Name):lower()
+    return hint:find("redeem") ~= nil or hint:find("submit") ~= nil
+end
+
+local function fireSubmitButton(nearObj)
+    local target = nil
+
+    local container = nearObj and nearObj.Parent or nil
+    local levels = 0
+    while container and not target and levels < 5 do
+        for _, obj in ipairs(container:GetDescendants()) do
+            if isSubmitButton(obj) then
+                target = obj
+                break
+            end
+        end
+        container = container.Parent
+        levels = levels + 1
+    end
+
+    if not target then return false end
+
+    fireSignal(target.MouseButton1Click)
+    fireSignal(target.Activated)
+    return true
+end
+
+-- ─── RF/RequestRedemption direct path ────────────────────────────────────────
+local _rfRemote = nil
+local function getRedemptionRF()
+    if _rfRemote and _rfRemote.Parent then return _rfRemote end
+    _rfRemote = nil
+
+    -- 1) Normal FindFirstChild (works if not hidden)
+    local rfFolder = ReplicatedStorage:FindFirstChild("RF")
+    if rfFolder then
+        local rf = rfFolder:FindFirstChild("RequestRedemption")
+        if rf and rf:IsA("RemoteFunction") then
+            _rfRemote = rf
+            return _rfRemote
+        end
+    end
+
+    -- 2) GetChildren() scan — catches hidden instances that FindFirstChild misses
+    if rfFolder then
+        for _, v in ipairs(rfFolder:GetChildren()) do
+            if v.Name == "RequestRedemption" and v:IsA("RemoteFunction") then
+                _rfRemote = v
+                return _rfRemote
+            end
+        end
+    end
+
+    -- 3) getinstances() — executor-level full instance list, finds truly hidden remotes
+    if getinstances then
+        for _, v in ipairs(getinstances()) do
+            if v.Name == "RequestRedemption" and v:IsA("RemoteFunction") then
+                _rfRemote = v
+                return _rfRemote
+            end
+        end
+    end
+
+    return _rfRemote
+end
+
+local function redeemViaRF(code)
+    local rf = getRedemptionRF()
+    if not rf then return false end
+    local formatted = formatCode(code)
+    local ok, result = pcall(function()
+        return rf:InvokeServer(formatted)
+    end)
+    if ok then
+        local target = math.max(1, tonumber(_G.SubmitAfterCount) or 1)
+        directRedeemProgress = (directRedeemProgress % target) + 1
+        logPastedCode(formatted, directRedeemProgress, target)
+        logStatus("Redeemed via RF: " .. formatted .. (result ~= nil and (" → " .. tostring(result)) or ""))
+        return true
+    else
+        logStatus("RF invoke failed: " .. tostring(result))
+        return false
+    end
+end
+-- ──────────────────────────────────────────────────────────────────────────────
+
+local function writeAndSubmit(code)
+    -- When the redeem box is open, use it first so "Submit After" can keep
+    -- codes together and correctly count 1/3, 2/3, then 3/3.
+    local textBox = findCodeTextBox()
+    if not textBox then
+        -- The direct remote is only a fallback when no code box is available.
+        if redeemViaRF(code) then return true end
+        logStatus("Waiting for an open code box...")
+        return false
+    end
+
+    local formatted = formatCode(code)
+
+    pcall(function() textBox.ClearTextOnFocus = false end)
+
+    local target = math.max(1, tonumber(_G.SubmitAfterCount) or 1)
+    if not collectedSeen[formatted] then
+        collectedSeen[formatted] = true
+        table.insert(collectedCodes, formatted)
+        logPastedCode(formatted, #collectedCodes, target)
+    end
+    local ready = #collectedCodes >= target
+
+    -- Submit delay
+    local delay = tonumber(_G.SubmitDelay) or 0
+    if delay > 0 then
+        task.wait(delay)
+    end
+
+    -- A redeem TextBox accepts one code at a time.  Never concatenate them
+    -- (e.g. PIGGYPIGGYPIGGY): each stored code is placed and submitted alone.
+    local function putCodeInBox(box, value)
+        local ok = pcall(function()
+            box:CaptureFocus()
+            box.Text = value
+            box.CursorPosition = #value + 1
+        end)
+        if not ok then pcall(function() box.Text = value end) end
+        pcall(function() box:ReleaseFocus(true) end)
+    end
+
+    if ready and _G.AutoSubmitEnabled then
+        local count = #collectedCodes
+        local btn = false
+        for _, batchCode in ipairs(collectedCodes) do
+            local box = findCodeTextBox()
+            if not box then break end
+
+            -- Give the game's TextBox and its redemption handler time to
+            -- process each individual code before replacing it with the next.
+            putCodeInBox(box, batchCode)
+            task.wait(math.max(0.15, delay))
+            for _ = 1, _G.SubmitAttempts do
+                if fireSubmitButton(box) then btn = true end
+            end
+            task.wait(0.20)
+        end
+        logStatus("Submitted " .. count .. " code(s) (btn=" .. tostring(btn) .. ")")
+        table.clear(collectedCodes)
+        table.clear(collectedSeen)
+    else
+        -- While collecting, only show the newest code, never the full batch.
+        putCodeInBox(textBox, formatted)
+        if ready then
+            logStatus("Collected " .. #collectedCodes .. " codes (submit off).")
+            table.clear(collectedCodes)
+            table.clear(collectedSeen)
+        else
+            logStatus("Added: " .. formatted .. "  (" .. #collectedCodes .. "/" .. target .. ")")
+        end
+    end
+
+    return true
+end
+
+-- triggerWrite: fires instantly, no polling — called whenever a code is queued
+-- or the TextBox appears. Does nothing if already busy or nothing to do.
+local function triggerWrite()
+    if writeBusy or not _G.AutoWriteEnabled or #pendingQueue == 0 then return end
+    local focused = UserInputService:GetFocusedTextBox()
+    if focused and ScreenGui and focused:IsDescendantOf(ScreenGui) then return end
+    local box = findCodeTextBox()
+    if not (box and isGuiVisible(box)) then return end
+    writeBusy = true
+    task.spawn(function()
+        local ok, err = pcall(function()
+            while _G.AutoWriteEnabled and #pendingQueue > 0 do
+                local b = findCodeTextBox()
+                if not (b and isGuiVisible(b)) then break end
+                local code = table.remove(pendingQueue, 1)
+                pendingSeen[code] = nil
+                writeAndSubmit(code)
+            end
+        end)
+        writeBusy = false  -- ALWAYS reset, even if writeAndSubmit errored
+        if not ok then warn("[BrainrotCopier] triggerWrite error: " .. tostring(err)) end
+    end)
+end
+
+local function startAutoWriteLoop()
+    if autoWriteConn then return end
+    -- No polling loop — writes are triggered instantly from queue insertions.
+    -- We only need DescendantAdded to fire triggerWrite when the box first appears.
+    local playerGui = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 10)
+    local boxConn = playerGui and playerGui.DescendantAdded:Connect(function(obj)
+        if _isCodeBox(obj) and isGuiVisible(obj) then
+            _cachedBox = obj
+            triggerWrite()  -- box just appeared — drain queue immediately
+        end
+    end)
+    local boxRemConn = playerGui and playerGui.DescendantRemoving:Connect(function(obj)
+        if obj == _cachedBox then _cachedBox = nil end
+    end)
+    autoWriteConn = { Disconnect = function()
+        if boxConn then boxConn:Disconnect() end
+        if boxRemConn then boxRemConn:Disconnect() end
+    end }
+    table.insert(activeConnections, autoWriteConn)
+end
+
+-- Recursively extract strings from any value (handles string, table, mixed args)
+local function extractStrings(val, out)
+    out = out or {}
+    local t = type(val)
+    if t == "string" then
+        table.insert(out, val)
+    elseif t == "table" then
+        for _, v in pairs(val) do
+            extractStrings(v, out)
+        end
+    end
+    return out
+end
+
+local function processText(text)
+    if not text or text == "" then return end
+
+    local codes = extractCodesFromText(text)
+    if #codes == 0 then return end
+
+    for _, code in ipairs(codes) do
+        copyCodeToClipboard(code)
+        latestCode = code
+
+        -- PhiNotify can send the same announcement more than once.  Keep a
+        -- permanent per-session record so code #1 or #2 is not typed again.
+        local codeKey = formatCode(code)
+        if not enteredCodes[codeKey] and not pendingSeen[codeKey] then
+            enteredCodes[codeKey] = true
+            pendingSeen[codeKey] = true
+            table.insert(pendingQueue, codeKey)
+            triggerWrite()  -- instant — no polling needed
+        end
+
+        logStatus("Code detected: " .. code)
+    end
+end
+
+-- ─── PhiNotify remote resolver ───────────────────────────────────────────────
+-- Finds the obfuscated notification RemoteEvent by inspecting the connection
+-- graph of ReplicatedStorage.Packages.Net descendants.  The target is
+-- whichever RemoteEvent has a live OnClientEvent handler whose source
+-- references "NotificationController".  Falls back to a name-pattern match
+-- ("RE/<hex>") if debug APIs are unavailable.  Result is cached in
+-- _G.PhiNotifyRemote so subsequent calls are instant.
+local function resolveRemote()
+    if _G.PhiNotifyRemote then return _G.PhiNotifyRemote end
+
+    -- Wait for Packages.Net to exist
+    local Net
+    local deadline = tick() + 30
+    while not Net and tick() < deadline do
+        pcall(function()
+            local Pkgs = ReplicatedStorage:FindFirstChild("Packages")
+            if Pkgs then Net = Pkgs:FindFirstChild("Net") end
+        end)
+        if not Net then task.wait(0.5) end
+    end
+    if not Net then return nil end
+
+    local getinfo = debug and (debug.getinfo or debug.info)
+
+    -- Strategy 1: inspect connection function sources via getconnections
+    if getconnections and getinfo then
+        for _, d in ipairs(Net:GetDescendants()) do
+            if d:IsA("RemoteEvent") then
+                local ok, cs = pcall(getconnections, d.OnClientEvent)
+                if ok and cs then
+                    for _, c in ipairs(cs) do
+                        local f, fn = pcall(function() return c.Function end)
+                        if f and type(fn) == "function" then
+                            local i, info = pcall(getinfo, fn)
+                            if i and tostring(
+                                (type(info) == "table" and (info.short_src or info.source)) or info or ""
+                            ):find("NotificationController", 1, true) then
+                                _G.PhiNotifyRemote = d
+                                return d
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- Strategy 2: name pattern match ("RE/<hex chars>")
+    for _, d in ipairs(Net:GetDescendants()) do
+        if d:IsA("RemoteEvent") and d.Name:match("^RE/%x+$") then
+            _G.PhiNotifyRemote = d
+            return d
+        end
+    end
+
+    return nil
+end
+
+local function startMonitoring()
+    task.spawn(function()
+        logStatus("Resolving PhiNotify remote...")
+
+        local NC = resolveRemote()
+
+        if not NC then
+            logStatus("PhiNotify remote not found — hook failed.")
+            return
+        end
+
+        local conn = NC.OnClientEvent:Connect(function(...)
+            if not _G.ScriptEnabled then return end
+            local strings = {}
+            for _, v in ipairs({...}) do
+                extractStrings(v, strings)
+            end
+            for _, s in ipairs(strings) do
+                processText(s)
+            end
+        end)
+
+        table.insert(activeConnections, conn)
+        logStatus("Hooked " .. NC.Name .. " — listening!")
+    end)
+end
+
+local function cleanupMonitoring()
+    for _, conn in pairs(activeConnections) do
+        if typeof(conn) == "RBXScriptConnection" then
+            conn:Disconnect()
+        end
+    end
+    table.clear(activeConnections)
+    table.clear(enteredCodes)
+    table.clear(collectedCodes)
+    table.clear(collectedSeen)
+    table.clear(pendingQueue)
+    table.clear(pendingSeen)
+    writeBusy = false
+    autoWriteConn = nil
+    latestCode = nil
+    lastWrittenCode = nil
+end
+
+local function createUI()
+    local oldGui = game:GetService("CoreGui"):FindFirstChild("BrainrotRedeemerGui")
+        or LocalPlayer.PlayerGui:FindFirstChild("BrainrotRedeemerGui")
+    if oldGui then oldGui:Destroy() end
+
+    ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "BrainrotRedeemerGui"
+    ScreenGui.ResetOnSpawn = false
+
+    local successParent = pcall(function()
+        ScreenGui.Parent = game:GetService("CoreGui")
+    end)
+    if not successParent then
+        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    end
+
+    MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 330, 0, 300)
+    MainFrame.Position = UDim2.new(0.5, -165, 0.4, -155)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.ClipsDescendants = true
+    MainFrame.Parent = ScreenGui
+
+    local FULL_HEIGHT = 300
+    local MINI_HEIGHT = 40
+
+    local mainCorner = Instance.new("UICorner")
+    mainCorner.CornerRadius = UDim.new(0, 12)
+    mainCorner.Parent = MainFrame
+
+    local mainStroke = Instance.new("UIStroke")
+    mainStroke.Color = Color3.fromRGB(255, 255, 255)
+    mainStroke.Transparency = 0.35
+    mainStroke.Thickness = 2
+    mainStroke.Parent = MainFrame
+
+    local strokeGradient = Instance.new("UIGradient")
+    strokeGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(200, 200, 200)),
+        ColorSequenceKeypoint.new(0.66, Color3.fromRGB(30, 30, 30)),
+        ColorSequenceKeypoint.new(1.0, Color3.fromRGB(255, 255, 255))
+    })
+    strokeGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0.0, 0.1),
+        NumberSequenceKeypoint.new(0.5, 0.6),
+        NumberSequenceKeypoint.new(1.0, 0.1)
+    })
+    strokeGradient.Rotation = 45
+    strokeGradient.Parent = mainStroke
+
+    local rgbConn = RunService.RenderStepped:Connect(function()
+        if not strokeGradient or not strokeGradient.Parent then return end
+        strokeGradient.Rotation = (tick() * 60) % 360
+    end)
+    table.insert(activeConnections, rgbConn)
+
+    local mainGradient = Instance.new("UIGradient")
+    mainGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 22)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 5, 7))
+    })
+    mainGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0.0, 0.15),
+        NumberSequenceKeypoint.new(0.8, 0.45),
+        NumberSequenceKeypoint.new(1.0, 0.15)
+    })
+    mainGradient.Rotation = 45
+    mainGradient.Parent = MainFrame
+
+    local dragToggle = nil
+    local dragStart = nil
+    local startPos = nil
+
+    local function updateInput(input)
+        local delta = input.Position - dragStart
+        local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        TweenService:Create(MainFrame, TweenInfo.new(0.08), {Position = position}):Play()
+    end
+
+    MainFrame.InputBegan:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            dragToggle = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            input.Changed:Connect(function()
+                if (input.UserInputState == Enum.UserInputState.End) then
+                    dragToggle = false
+                end
+            end)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            if dragToggle then
+                updateInput(input)
+            end
+        end
+    end)
+
+    local AccentBar = Instance.new("Frame")
+    AccentBar.Name = "AccentBar"
+    AccentBar.Size = UDim2.new(0, 4, 0, 24)
+    AccentBar.Position = UDim2.new(0, 10, 0, 8)
+    AccentBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    AccentBar.BorderSizePixel = 0
+    AccentBar.ZIndex = 2
+    AccentBar.Parent = MainFrame
+    local AccentCorner = Instance.new("UICorner")
+    AccentCorner.CornerRadius = UDim.new(1, 0)
+    AccentCorner.Parent = AccentBar
+
+    -- Animated rotating glow border effect around MainFrame
+    local BorderGlow = Instance.new("Frame")
+    BorderGlow.Name = "BorderGlow"
+    BorderGlow.Size = UDim2.new(1, 10, 1, 10)
+    BorderGlow.Position = UDim2.new(0, -5, 0, -5)
+    BorderGlow.BackgroundTransparency = 1
+    BorderGlow.BorderSizePixel = 0
+    BorderGlow.ZIndex = 10
+    BorderGlow.Parent = MainFrame
+
+    local glowStroke = Instance.new("UIStroke")
+    glowStroke.Color = Color3.fromRGB(255, 255, 255)
+    glowStroke.Transparency = 0.35
+    glowStroke.Thickness = 3
+    glowStroke.Parent = BorderGlow
+    local glowCorner = Instance.new("UICorner")
+    glowCorner.CornerRadius = UDim.new(0, 16)
+    glowCorner.Parent = BorderGlow
+
+    -- Rotating gradient overlay effect behind glow
+    local glowOver = Instance.new("Frame")
+    glowOver.Size = UDim2.new(1, 6, 1, 6)
+    glowOver.Position = UDim2.new(0, -3, 0, -3)
+    glowOver.ZIndex = 9
+    glowOver.BorderSizePixel = 0
+    glowOver.Parent = MainFrame
+    local glowOverCorner = Instance.new("UICorner")
+    glowOverCorner.CornerRadius = UDim.new(0, 14)
+    glowOverCorner.Parent = glowOver
+    local glowOverGrad = Instance.new("UIGradient")
+    glowOverGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(0.3, Color3.fromRGB(200, 200, 200)),
+        ColorSequenceKeypoint.new(0.7, Color3.fromRGB(50, 50, 50)),
+        ColorSequenceKeypoint.new(1.0, Color3.fromRGB(255, 255, 255))
+    })
+    glowOverGrad.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0.0, 0.2),
+        NumberSequenceKeypoint.new(0.5, 0.7),
+        NumberSequenceKeypoint.new(1.0, 0.2)
+    })
+    glowOverGrad.Rotation = 0
+    glowOverGrad.Parent = glowOver
+
+    local glowConn = RunService.RenderStepped:Connect(function()
+        if glowOverGrad and glowOverGrad.Parent then
+            glowOverGrad.Rotation = (tick() * 50) % 360
+        end
+    end)
+    table.insert(activeConnections, { Disconnect = function() glowConn:Disconnect() end })
+
+    local HeaderLabel = Instance.new("TextLabel")
+    HeaderLabel.Name = "HeaderLabel"
+    HeaderLabel.Size = UDim2.new(1, -155, 0, 35)
+    HeaderLabel.Position = UDim2.new(0, 20, 0, 0)
+    HeaderLabel.BackgroundTransparency = 1
+    HeaderLabel.RichText = true
+    HeaderLabel.Text = '<b>Wxna<font color="#FFFFFF"> Hub</font></b>'
+        .. '  <font color="#AAAAAA" size="11">Code Copier</font>'
+    HeaderLabel.TextColor3 = Color3.fromRGB(245, 245, 245)
+    HeaderLabel.TextSize = 16
+    HeaderLabel.Font = Enum.Font.GothamBold
+    HeaderLabel.TextXAlignment = Enum.TextXAlignment.Left
+    HeaderLabel.Parent = MainFrame
+
+    local function makeHeaderButton(name, char, xOffset, hoverColor)
+        local btn = Instance.new("TextButton")
+        btn.Name = name
+        btn.Size = UDim2.new(0, 28, 0, 28)
+        btn.Position = UDim2.new(1, xOffset, 0, 4)
+        btn.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+        btn.AutoButtonColor = false
+        btn.Text = char
+        btn.TextColor3 = Color3.fromRGB(200, 190, 220)
+        btn.TextSize = 14
+        btn.Font = Enum.Font.GothamBold
+        btn.Parent = MainFrame
+
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, 6)
+        c.Parent = btn
+
+        local s = Instance.new("UIStroke")
+        s.Color = Color3.fromRGB(120, 120, 130)
+        s.Thickness = 1
+        s.Parent = btn
+
+        btn.MouseEnter:Connect(function()
+            btn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        end)
+        btn.MouseLeave:Connect(function()
+            btn.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+            btn.TextColor3 = Color3.fromRGB(210, 210, 215)
+        end)
+        return btn
+    end
+
+    local SettingsButton = makeHeaderButton("SettingsButton", "⚙", -134, Color3.fromRGB(120, 60, 200))
+    local InstructionsButton = makeHeaderButton("InstructionsButton", "?", -101, Color3.fromRGB(120, 60, 200))
+    local MinimizeButton = makeHeaderButton("MinimizeButton", "–", -68, Color3.fromRGB(120, 60, 200))
+    local CloseButton = makeHeaderButton("CloseButton", "X", -35, Color3.fromRGB(200, 50, 60))
+
+    CloseButton.MouseButton1Click:Connect(function()
+        cleanupMonitoring()
+        ScreenGui:Destroy()
+    end)
+
+    local minimized = false
+    MinimizeButton.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        local h = minimized and MINI_HEIGHT or FULL_HEIGHT
+        MinimizeButton.Text = minimized and "+" or "–"
+        TweenService:Create(MainFrame, TweenInfo.new(0.2),
+            {Size = UDim2.new(0, 330, 0, h)}):Play()
+    end)
+
+    -- Compact settings overlay: keeps the main panel focused on monitoring.
+    local SettingsFrame = Instance.new("Frame")
+    SettingsFrame.Name = "SettingsFrame"
+    SettingsFrame.Size = UDim2.new(1, -20, 0, 198)
+    SettingsFrame.Position = UDim2.new(0, 10, 0, 40)
+    SettingsFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+    SettingsFrame.BackgroundTransparency = 0.03
+    SettingsFrame.BorderSizePixel = 0
+    SettingsFrame.Visible = false
+    SettingsFrame.ZIndex = 5
+    SettingsFrame.ClipsDescendants = true
+    SettingsFrame.Parent = MainFrame
+
+    local settingsCorner = Instance.new("UICorner")
+    settingsCorner.CornerRadius = UDim.new(0, 10)
+    settingsCorner.Parent = SettingsFrame
+    local settingsStroke = Instance.new("UIStroke")
+    settingsStroke.Color = Color3.fromRGB(245, 245, 255)
+    settingsStroke.Transparency = 0.35
+    settingsStroke.Thickness = 1.5
+    settingsStroke.Parent = SettingsFrame
+    local settingsGradient = Instance.new("UIGradient")
+    settingsGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 45)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(12, 12, 16)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 25, 32))
+    })
+    settingsGradient.Rotation = 35
+    settingsGradient.Parent = SettingsFrame
+    local settingsScale = Instance.new("UIScale")
+    settingsScale.Scale = 0.94
+    settingsScale.Parent = SettingsFrame
+
+    local settingsAnim = RunService.RenderStepped:Connect(function()
+        if settingsGradient.Parent and SettingsFrame.Visible then
+            settingsGradient.Rotation = (tick() * 28) % 360
+        end
+    end)
+    table.insert(activeConnections, { Disconnect = function() settingsAnim:Disconnect() end })
+
+    local InstructionsFrame = Instance.new("Frame")
+    InstructionsFrame.Name = "InstructionsFrame"
+    InstructionsFrame.Size = UDim2.new(1, -20, 1, -45)
+    InstructionsFrame.Position = UDim2.new(0, 10, 0, 40)
+    InstructionsFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 12)
+    InstructionsFrame.BorderSizePixel = 0
+    InstructionsFrame.Visible = false
+    InstructionsFrame.ZIndex = 5
+    InstructionsFrame.Parent = MainFrame
+
+    local infoCorner = Instance.new("UICorner")
+    infoCorner.CornerRadius = UDim.new(0, 8)
+    infoCorner.Parent = InstructionsFrame
+
+    local infoStroke = Instance.new("UIStroke")
+    infoStroke.Color = Color3.fromRGB(255, 255, 255)
+    infoStroke.Transparency = 0.3
+    infoStroke.Thickness = 1.5
+    infoStroke.Parent = InstructionsFrame
+
+    local InfoText = Instance.new("TextLabel")
+    InfoText.Size = UDim2.new(1, -20, 1, -20)
+    InfoText.Position = UDim2.new(0, 10, 0, 10)
+    InfoText.BackgroundTransparency = 1
+    InfoText.ZIndex = 6
+    InfoText.RichText = true
+    InfoText.TextWrapped = true
+    InfoText.TextXAlignment = Enum.TextXAlignment.Left
+    InfoText.TextYAlignment = Enum.TextYAlignment.Top
+    InfoText.TextColor3 = Color3.fromRGB(220, 220, 225)
+    InfoText.TextSize = 12
+    InfoText.Font = Enum.Font.Gotham
+    InfoText.Text = '<b><font color="#FFFFFF">Wxna Hub — How to use</font></b>\n\n'
+        .. '• <b>Start / Stop</b>: turn code detection on or off.\n'
+        .. '• <b>Settings (⚙)</b>: casing, redeem delay and submit count.\n'
+        .. '• <b>Auto-Write</b>: types detected codes into the game\'s code box (must be open).\n'
+        .. '• <b>Auto-Submit</b>: presses Enter / clicks redeem.\n\n'
+        .. '<font color="#FFFFFF">Detection source:</font> PhiNotify (RE/&lt;hex&gt; resolver)\n'
+        .. 'Codes fire directly from the server — no screen scanning needed.\n\n'
+        .. 'Detected codes are always copied to clipboard too.'
+    InfoText.Parent = InstructionsFrame
+
+    InstructionsButton.MouseButton1Click:Connect(function()
+        InstructionsFrame.Visible = not InstructionsFrame.Visible
+    end)
+
+
+    local function showSettings(show)
+        if show then
+            InstructionsFrame.Visible = false
+            SettingsFrame.Visible = true
+            SettingsFrame.Position = UDim2.new(0, 10, 0, 48)
+            SettingsFrame.BackgroundTransparency = 0.2
+            settingsScale.Scale = 0.94
+            TweenService:Create(SettingsFrame, TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                Position = UDim2.new(0, 10, 0, 40), BackgroundTransparency = 0.03
+            }):Play()
+            TweenService:Create(settingsScale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            TweenService:Create(settingsStroke, TweenInfo.new(0.25), {Transparency = 0.12, Thickness = 2}):Play()
+        else
+            local closeTween = TweenService:Create(SettingsFrame, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Position = UDim2.new(0, 10, 0, 48), BackgroundTransparency = 0.25
+            })
+            TweenService:Create(settingsScale, TweenInfo.new(0.14), {Scale = 0.96}):Play()
+            closeTween:Play()
+            closeTween.Completed:Once(function()
+                if SettingsFrame.Position.Y.Offset == 48 then SettingsFrame.Visible = false end
+            end)
+        end
+    end
+
+    SettingsButton.MouseButton1Click:Connect(function()
+        showSettings(not SettingsFrame.Visible)
+    end)
+
+    local Divider = Instance.new("Frame")
+    Divider.Size = UDim2.new(1, -20, 0, 1)
+    Divider.Position = UDim2.new(0, 10, 0, 35)
+    Divider.BackgroundColor3 = Color3.fromRGB(180, 180, 185)
+    Divider.BorderSizePixel = 0
+    Divider.Parent = MainFrame
+
+    local ToggleLabel = Instance.new("TextLabel")
+    ToggleLabel.Size = UDim2.new(0, 150, 0, 30)
+    ToggleLabel.Position = UDim2.new(0, 15, 0, 50)
+    ToggleLabel.BackgroundTransparency = 1
+    ToggleLabel.Text = "Monitoring Status"
+    ToggleLabel.TextColor3 = Color3.fromRGB(245, 245, 250)
+    ToggleLabel.TextSize = 13
+    ToggleLabel.Font = Enum.Font.GothamSemibold
+    ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    ToggleLabel.Parent = MainFrame
+
+    local StartButton = Instance.new("TextButton")
+    StartButton.Name = "StartButton"
+    StartButton.Size = UDim2.new(0, 60, 0, 30)
+    StartButton.Position = UDim2.new(1, -140, 0, 48)
+    StartButton.Text = "START"
+    StartButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    StartButton.TextSize = 11
+    StartButton.Font = Enum.Font.GothamBold
+    StartButton.AutoButtonColor = false
+    StartButton.Parent = MainFrame
+
+    local startCorner = Instance.new("UICorner")
+    startCorner.CornerRadius = UDim.new(0, 8)
+    startCorner.Parent = StartButton
+
+    local startStroke = Instance.new("UIStroke")
+    startStroke.Color = Color3.fromRGB(255, 255, 255)
+    startStroke.Transparency = 0.3
+    startStroke.Thickness = 1.5
+    startStroke.Parent = StartButton
+
+    local StopButton = Instance.new("TextButton")
+    StopButton.Name = "StopButton"
+    StopButton.Size = UDim2.new(0, 60, 0, 30)
+    StopButton.Position = UDim2.new(1, -70, 0, 48)
+    StopButton.Text = "STOP"
+    StopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    StopButton.TextSize = 11
+    StopButton.Font = Enum.Font.GothamBold
+    StopButton.AutoButtonColor = false
+    StopButton.Parent = MainFrame
+
+    local stopCorner = Instance.new("UICorner")
+    stopCorner.CornerRadius = UDim.new(0, 8)
+    stopCorner.Parent = StopButton
+
+    local stopStroke = Instance.new("UIStroke")
+    stopStroke.Color = Color3.fromRGB(255, 255, 255)
+    stopStroke.Transparency = 0.3
+    stopStroke.Thickness = 1.5
+    stopStroke.Parent = StopButton
+
+    local function renderStartStop()
+        if _G.ScriptEnabled then
+            StartButton.BackgroundColor3 = Color3.fromRGB(250, 250, 252)
+            StartButton.TextColor3 = Color3.fromRGB(5, 5, 8)
+            StopButton.BackgroundColor3 = Color3.fromRGB(22, 22, 25)
+            StopButton.TextColor3 = Color3.fromRGB(240, 240, 245)
+            StopButton.Text = "STOP"
+        else
+            StartButton.BackgroundColor3 = Color3.fromRGB(22, 22, 25)
+            StartButton.TextColor3 = Color3.fromRGB(240, 240, 245)
+            StopButton.BackgroundColor3 = Color3.fromRGB(250, 250, 252)
+            StopButton.TextColor3 = Color3.fromRGB(5, 5, 8)
+            StopButton.Text = "STOP"
+        end
+        -- Glow animation
+        TweenService:Create(startStroke, TweenInfo.new(0.25), {
+            Transparency = _G.ScriptEnabled and 0.1 or 0.35
+        }):Play()
+        TweenService:Create(stopStroke, TweenInfo.new(0.25), {
+            Transparency = not _G.ScriptEnabled and 0.1 or 0.35
+        }):Play()
+    end
+    renderStartStop()
+
+    StartButton.MouseButton1Click:Connect(function()
+        _G.ScriptEnabled = true
+        renderStartStop()
+        logStatus("Detection started.")
+    end)
+
+    StopButton.MouseButton1Click:Connect(function()
+        _G.ScriptEnabled = false
+        renderStartStop()
+        logStatus("Detection stopped.")
+    end)
+
+    -- Settings contents ------------------------------------------------------
+    local SettingsTitle = Instance.new("TextLabel")
+    SettingsTitle.Size = UDim2.new(1, -24, 0, 28)
+    SettingsTitle.Position = UDim2.new(0, 12, 0, 5)
+    SettingsTitle.BackgroundTransparency = 1
+    SettingsTitle.Text = "SETTINGS"
+    SettingsTitle.TextColor3 = Color3.fromRGB(250, 250, 255)
+    SettingsTitle.TextSize = 12
+    SettingsTitle.Font = Enum.Font.GothamBold
+    SettingsTitle.TextXAlignment = Enum.TextXAlignment.Left
+    SettingsTitle.ZIndex = 6
+    SettingsTitle.Parent = SettingsFrame
+
+    local settingDivider = Instance.new("Frame")
+    settingDivider.Size = UDim2.new(1, -24, 0, 1)
+    settingDivider.Position = UDim2.new(0, 12, 0, 33)
+    settingDivider.BackgroundColor3 = Color3.fromRGB(110, 110, 125)
+    settingDivider.BorderSizePixel = 0
+    settingDivider.ZIndex = 6
+    settingDivider.Parent = SettingsFrame
+
+    local CaseLabel = Instance.new("TextLabel")
+    CaseLabel.Size = UDim2.new(1, -24, 0, 20)
+    CaseLabel.Position = UDim2.new(0, 12, 0, 40)
+    CaseLabel.BackgroundTransparency = 1
+    CaseLabel.Text = "TEXT FORMATTING"
+    CaseLabel.TextColor3 = Color3.fromRGB(190, 190, 205)
+    CaseLabel.TextSize = 10
+    CaseLabel.Font = Enum.Font.GothamBold
+    CaseLabel.TextXAlignment = Enum.TextXAlignment.Left
+    CaseLabel.ZIndex = 6
+    CaseLabel.Parent = SettingsFrame
+
+    local ButtonContainer = Instance.new("Frame")
+    ButtonContainer.Size = UDim2.new(1, -24, 0, 30)
+    ButtonContainer.Position = UDim2.new(0, 12, 0, 61)
+    ButtonContainer.BackgroundTransparency = 1
+    ButtonContainer.ZIndex = 6
+    ButtonContainer.Parent = SettingsFrame
+    local layout = Instance.new("UIListLayout")
+    layout.FillDirection = Enum.FillDirection.Horizontal
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 7)
+    layout.Parent = ButtonContainer
+
+    local optButtons = {}
+    local function updateCasingUI(selectedType)
+        _G.CasingType = selectedType
+        for casing, btn in pairs(optButtons) do
+            local selected = casing == selectedType
+            TweenService:Create(btn, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = selected and Color3.fromRGB(245, 245, 250) or Color3.fromRGB(25, 25, 30),
+                TextColor3 = selected and Color3.fromRGB(10, 10, 12) or Color3.fromRGB(190, 190, 200)
+            }):Play()
+        end
+        logStatus("Formatting changed to: " .. selectedType)
+    end
+
+    for _, opt in ipairs({{Type="Normal", Label="Normal"}, {Type="Upper", Label="UPPER"}, {Type="Lower", Label="lower"}}) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, 94, 0, 30)
+        btn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+        btn.Text = opt.Label
+        btn.TextColor3 = Color3.fromRGB(190, 190, 200)
+        btn.TextSize = 11
+        btn.Font = Enum.Font.GothamBold
+        btn.AutoButtonColor = false
+        btn.ZIndex = 6
+        btn.Parent = ButtonContainer
+        local corner = Instance.new("UICorner"); corner.CornerRadius = UDim.new(0, 7); corner.Parent = btn
+        local stroke = Instance.new("UIStroke"); stroke.Color = Color3.fromRGB(180,180,195); stroke.Transparency = 0.65; stroke.Parent = btn
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(45,45,52), Size = UDim2.new(0, 96, 0, 31)}):Play()
+        end)
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.12), {Size = UDim2.new(0, 94, 0, 30)}):Play()
+        end)
+        btn.MouseButton1Click:Connect(function() updateCasingUI(opt.Type) end)
+        optButtons[opt.Type] = btn
+    end
+    updateCasingUI(_G.CasingType or "Normal")
+
+    local CountLabel = Instance.new("TextLabel")
+    CountLabel.Size = UDim2.new(0, 190, 0, 28)
+    CountLabel.Position = UDim2.new(0, 12, 0, 100)
+    CountLabel.BackgroundTransparency = 1
+    CountLabel.Text = "Submit After"
+    CountLabel.TextColor3 = Color3.fromRGB(240, 240, 245)
+    CountLabel.TextSize = 12
+    CountLabel.Font = Enum.Font.GothamSemibold
+    CountLabel.TextXAlignment = Enum.TextXAlignment.Left
+    CountLabel.ZIndex = 6
+    CountLabel.Parent = SettingsFrame
+    local CountBox = Instance.new("TextBox")
+    CountBox.Name = "CountBox"; CountBox.Size = UDim2.new(0, 76, 0, 27); CountBox.Position = UDim2.new(1, -88, 0, 100)
+    CountBox.BackgroundColor3 = Color3.fromRGB(35,35,45); CountBox.Text = tostring(_G.SubmitAfterCount); CountBox.PlaceholderText = "1"
+    CountBox.TextColor3 = Color3.fromRGB(245,245,250); CountBox.TextSize = 12; CountBox.Font = Enum.Font.GothamBold; CountBox.ClearTextOnFocus = false; CountBox.ZIndex = 6; CountBox.Parent = SettingsFrame
+    local countCorner = Instance.new("UICorner"); countCorner.CornerRadius = UDim.new(0,6); countCorner.Parent = CountBox
+    CountBox.FocusLost:Connect(function()
+        local n = math.max(1, math.floor(tonumber(CountBox.Text) or 1)); _G.SubmitAfterCount = n; CountBox.Text = tostring(n)
+        logStatus("Will submit after " .. n .. " code(s).")
+    end)
+
+    local DelayLabel = Instance.new("TextLabel")
+    DelayLabel.Size = UDim2.new(0, 190, 0, 28); DelayLabel.Position = UDim2.new(0, 12, 0, 143)
+    DelayLabel.BackgroundTransparency = 1; DelayLabel.Text = "Redeem Delay (sec)"; DelayLabel.TextColor3 = Color3.fromRGB(240,240,245)
+    DelayLabel.TextSize = 12; DelayLabel.Font = Enum.Font.GothamSemibold; DelayLabel.TextXAlignment = Enum.TextXAlignment.Left; DelayLabel.ZIndex = 6; DelayLabel.Parent = SettingsFrame
+    local DelayValue = Instance.new("TextLabel")
+    DelayValue.Size = UDim2.new(0,42,0,26); DelayValue.Position = UDim2.new(1,-132,0,144); DelayValue.BackgroundColor3 = Color3.fromRGB(25,25,30)
+    DelayValue.TextColor3 = Color3.fromRGB(250,250,255); DelayValue.TextSize = 12; DelayValue.Font = Enum.Font.GothamBold; DelayValue.ZIndex = 6; DelayValue.Parent = SettingsFrame
+    local delayCorner = Instance.new("UICorner"); delayCorner.CornerRadius = UDim.new(0,6); delayCorner.Parent = DelayValue
+    local function delayButton(name, text, x)
+        local b=Instance.new("TextButton"); b.Name=name; b.Size=UDim2.new(0,27,0,27); b.Position=UDim2.new(1,x,0,143); b.BackgroundColor3=Color3.fromRGB(42,42,48)
+        b.Text=text; b.TextColor3=Color3.fromRGB(255,255,255); b.TextSize=17; b.Font=Enum.Font.GothamBold; b.AutoButtonColor=false; b.ZIndex=6; b.Parent=SettingsFrame
+        local c=Instance.new("UICorner"); c.CornerRadius=UDim.new(0,6); c.Parent=b
+        b.MouseEnter:Connect(function() TweenService:Create(b,TweenInfo.new(.12),{BackgroundColor3=Color3.fromRGB(80,80,90)}):Play() end)
+        b.MouseLeave:Connect(function() TweenService:Create(b,TweenInfo.new(.12),{BackgroundColor3=Color3.fromRGB(42,42,48)}):Play() end)
+        return b
+    end
+    local MinusBtn=delayButton("MinusBtn", "−", -84)
+    local PlusBtn=delayButton("PlusBtn", "+", -50)
+    local function updateDelayUI() DelayValue.Text = string.format("%.1f", tonumber(_G.SubmitDelay) or 0) end
+    updateDelayUI()
+    MinusBtn.MouseButton1Click:Connect(function() _G.SubmitDelay=math.max(0,(tonumber(_G.SubmitDelay) or 0)-.1); updateDelayUI(); logStatus("Redeem delay: "..DelayValue.Text.." sec") end)
+    PlusBtn.MouseButton1Click:Connect(function() _G.SubmitDelay=math.min(5,(tonumber(_G.SubmitDelay) or 0)+.1); updateDelayUI(); logStatus("Redeem delay: "..DelayValue.Text.." sec") end)
+
+    local function createToggleRow(labelText, yPos, startOn, onChanged)
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(0, 200, 0, 28)
+        lbl.Position = UDim2.new(0, 15, 0, yPos)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = labelText
+        lbl.TextColor3 = Color3.fromRGB(240, 240, 245)
+        lbl.TextSize = 13
+        lbl.Font = Enum.Font.GothamSemibold
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.Parent = MainFrame
+
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, 78, 0, 30)
+        btn.Position = UDim2.new(1, -90, 0, yPos)
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.TextSize = 12
+        btn.Font = Enum.Font.GothamBold
+        btn.AutoButtonColor = false
+        btn.Parent = MainFrame
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = btn
+
+        -- Animated glowing border around toggle
+        local toggleStroke = Instance.new("UIStroke")
+        toggleStroke.Color = Color3.fromRGB(255, 255, 255)
+        toggleStroke.Transparency = 0.3
+        toggleStroke.Thickness = 1.5
+        toggleStroke.Parent = btn
+
+        -- Animated rotation using a separate glow frame behind the button
+        local glowFrame = Instance.new("Frame")
+        glowFrame.Name = "ToggleGlow"
+        glowFrame.Size = UDim2.new(1, 14, 1, 14)
+        glowFrame.Position = UDim2.new(0.5, -7, 0.5, -7)
+        glowFrame.BackgroundTransparency = 0.5
+        glowFrame.ZIndex = -1
+        glowFrame.BorderSizePixel = 0
+        glowFrame.Parent = btn
+        local glowCorner = Instance.new("UICorner")
+        glowCorner.CornerRadius = UDim.new(0, 12)
+        glowCorner.Parent = glowFrame
+        local glowGrad = Instance.new("UIGradient")
+        glowGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0.0, Color3.fromRGB(255, 255, 255)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 180, 180)),
+            ColorSequenceKeypoint.new(1.0, Color3.fromRGB(255, 255, 255))
+        })
+        glowGrad.Rotation = 0
+        glowGrad.Parent = glowFrame
+
+        -- Animated rotation of gradient
+        local glowConn = RunService.RenderStepped:Connect(function()
+            if glowGrad and glowGrad.Parent then
+                glowGrad.Rotation = (tick() * 90) % 360
+            end
+        end)
+        activeConnections[#activeConnections + 1] = { Disconnect = function() glowConn:Disconnect() end }
+
+        local state = startOn
+        local function render()
+            local targetCol = state and Color3.fromRGB(245, 245, 250) or Color3.fromRGB(25, 25, 28)
+            local targetText = state and "ON" or "OFF"
+            TweenService:Create(btn, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = targetCol,
+            }):Play()
+
+            -- Scale animation on click
+            TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 72, 0, 28)
+            }):Play()
+            task.wait(0.08)
+            TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 78, 0, 30)
+            }):Play()
+
+            btn.Text = targetText
+            btn.TextColor3 = state and Color3.fromRGB(10, 10, 12) or Color3.fromRGB(200, 200, 210)
+
+            -- Glow intensity animation
+            TweenService:Create(toggleStroke, TweenInfo.new(0.3), {
+                Transparency = state and 0.1 or 0.4
+            }):Play()
+        end
+        render()
+
+        btn.MouseButton1Click:Connect(function()
+            state = not state
+            render()
+            onChanged(state)
+        end)
+        return btn
+    end
+
+    createToggleRow("Auto-Write:", 100, _G.AutoWriteEnabled, function(on)
+        _G.AutoWriteEnabled = on
+        if on then
+            logStatus("Auto-Write active (open the code box).")
+        else
+            table.clear(collectedCodes)
+            table.clear(collectedSeen)
+            table.clear(pendingQueue)
+            table.clear(pendingSeen)
+            lastWrittenCode = nil
+            logStatus("Auto-Write disabled (list cleared).")
+        end
+    end)
+
+    createToggleRow("Auto-Submit (Enter):", 140, _G.AutoSubmitEnabled, function(on)
+        _G.AutoSubmitEnabled = on
+        if on then
+            logStatus("Auto-Submit active.")
+        else
+            logStatus("Auto-Submit disabled.")
+        end
+    end)
+
+    -- Bottom paste activity: displays the latest codes and their group progress.
+    local PastePanel = Instance.new("Frame")
+    PastePanel.Name = "PastePanel"
+    PastePanel.Size = UDim2.new(1, -30, 0, 92)
+    PastePanel.Position = UDim2.new(0, 15, 0, 195)
+    PastePanel.BackgroundColor3 = Color3.fromRGB(8, 9, 12)
+    PastePanel.BorderSizePixel = 0
+    PastePanel.Parent = MainFrame
+    local pasteCorner = Instance.new("UICorner")
+    pasteCorner.CornerRadius = UDim.new(0, 7)
+    pasteCorner.Parent = PastePanel
+    local pasteStroke = Instance.new("UIStroke")
+    pasteStroke.Color = Color3.fromRGB(110, 180, 135)
+    pasteStroke.Transparency = 0.55
+    pasteStroke.Thickness = 1
+    pasteStroke.Parent = PastePanel
+
+    local pasteTitle = Instance.new("TextLabel")
+    pasteTitle.Size = UDim2.new(1, -18, 0, 20)
+    pasteTitle.Position = UDim2.new(0, 9, 0, 4)
+    pasteTitle.BackgroundTransparency = 1
+    pasteTitle.Text = "PASTE ACTIVITY"
+    pasteTitle.TextColor3 = Color3.fromRGB(130, 220, 160)
+    pasteTitle.TextSize = 10
+    pasteTitle.Font = Enum.Font.GothamBold
+    pasteTitle.TextXAlignment = Enum.TextXAlignment.Left
+    pasteTitle.Parent = PastePanel
+
+    local ClearPasteButton = Instance.new("TextButton")
+    ClearPasteButton.Name = "ClearPasteButton"
+    ClearPasteButton.Size = UDim2.new(0, 52, 0, 18)
+    ClearPasteButton.Position = UDim2.new(1, -61, 0, 5)
+    ClearPasteButton.BackgroundColor3 = Color3.fromRGB(40, 40, 47)
+    ClearPasteButton.Text = "CLEAR"
+    ClearPasteButton.TextColor3 = Color3.fromRGB(220, 220, 225)
+    ClearPasteButton.TextSize = 9
+    ClearPasteButton.Font = Enum.Font.GothamBold
+    ClearPasteButton.AutoButtonColor = false
+    ClearPasteButton.Parent = PastePanel
+    local clearCorner = Instance.new("UICorner")
+    clearCorner.CornerRadius = UDim.new(0, 5)
+    clearCorner.Parent = ClearPasteButton
+    local clearStroke = Instance.new("UIStroke")
+    clearStroke.Color = Color3.fromRGB(130, 220, 160)
+    clearStroke.Transparency = 0.6
+    clearStroke.Parent = ClearPasteButton
+
+    ClearPasteButton.MouseEnter:Connect(function()
+        TweenService:Create(ClearPasteButton, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(70, 70, 80)}):Play()
+    end)
+    ClearPasteButton.MouseLeave:Connect(function()
+        TweenService:Create(ClearPasteButton, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(40, 40, 47)}):Play()
+    end)
+    ClearPasteButton.MouseButton1Click:Connect(function()
+        -- Clear both the visual history and the de-duplication cache, so a
+        -- code such as PIGGY can be detected and written again after CLEAR.
+        table.clear(pasteHistory)
+        table.clear(enteredCodes)
+        table.clear(pendingQueue)
+        table.clear(pendingSeen)
+        table.clear(collectedCodes)
+        table.clear(collectedSeen)
+        directRedeemProgress = 0
+        if PasteLog and PasteLog.Parent then
+            PasteLog.Text = "Activity cleared."
+        end
+        logStatus("Paste activity cleared.")
+    end)
+
+    PasteLog = Instance.new("TextLabel")
+    PasteLog.Name = "PasteLog"
+    PasteLog.Size = UDim2.new(1, -18, 0, 62)
+    PasteLog.Position = UDim2.new(0, 9, 0, 24)
+    PasteLog.BackgroundTransparency = 1
+    PasteLog.Text = "Waiting for a code..."
+    PasteLog.TextColor3 = Color3.fromRGB(130, 220, 160)
+    PasteLog.TextSize = 12
+    PasteLog.Font = Enum.Font.RobotoMono
+    PasteLog.TextXAlignment = Enum.TextXAlignment.Left
+    PasteLog.TextYAlignment = Enum.TextYAlignment.Top
+    PasteLog.Parent = PastePanel
+    if #pasteHistory > 0 then
+        PasteLog.Text = table.concat(pasteHistory, "\n")
+    end
+
+
+end
+
+local function init()
+    pcall(cleanupMonitoring)
+    createUI()
+    startMonitoring()
+    startAutoWriteLoop()
+    logStatus("Wxna Hub — Ready!")
+end
+
+init()
