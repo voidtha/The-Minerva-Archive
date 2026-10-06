@@ -1,0 +1,3665 @@
+local u1 = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Name = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+
+game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local u4 = LocalPlayer.Character or LocalPlayer.CharacterAdded:wait()
+local Humanoid = u4:FindFirstChildOfClass("Humanoid")
+local _ = game:GetService("Players").LocalPlayer.Backpack
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Dropped = workspace.Dropped
+
+Dropped:GetDescendants()
+pcall(function()
+	local Field = workspace.Map.VIP.Field
+	local Field2 = workspace.Map.GroupReward.Field
+	local HitDetect = workspace.GoldenToilet.HitDetect
+
+	if Field then
+		Field:Destroy()
+	end
+
+	if Field2 then
+		Field2:Destroy()
+	end
+
+	if HitDetect then
+		HitDetect:Destroy()
+	end
+end)
+
+local u10 = u1:CreateWindow({
+	Title = "Uni Hub | ",
+	SubTitle = Name,
+	TabWidth = 130,
+	Size = UDim2.fromOffset(490, 400),
+	Acrylic = true,
+	Theme = "Amethyst",
+	MinimizeKey = Enum.KeyCode.LeftControl
+})
+local t1 = {
+	Updates = u10:AddTab({
+		Title = "Details",
+		Icon = "bell"
+	}),
+	PopItDropper = u10:AddTab({
+		Title = "Auto",
+		Icon = "moon"
+	}),
+	Misc = u10:AddTab({
+		Title = "Misc",
+		Icon = "sun"
+	}),
+	Trade = u10:AddTab({
+		Title = "Trade",
+		Icon = "scale"
+	}),
+	Visual = u10:AddTab({
+		Title = "Visual",
+		Icon = "copy"
+	}),
+	Fun = u10:AddTab({
+		Title = "Fun",
+		Icon = "smile"
+	}),
+	Craft = u10:AddTab({
+		Title = "Craft",
+		Icon = "pencil"
+	})
+}
+
+local function u12()
+	_G.Settings = {
+		Players = {
+			["Ignore Me"] = true,
+			["Ignore Others"] = true
+		},
+		Meshes = {
+			Destroy = true,
+			LowDetail = true
+		},
+		Images = {
+			Invisible = true,
+			LowDetail = false,
+			Destroy = false
+		},
+		["No Particles"] = true,
+		["No Camera Effects"] = true,
+		["No Explosions"] = true,
+		["No Clothes"] = true,
+		["Low Water Graphics"] = true,
+		["No Shadows"] = true,
+		["Low Rendering"] = true,
+		["Low Quality Parts"] = true
+	}
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/CasperFlyModz/discord.gg-rips/main/FPSBooster.lua"))()
+	_G.fpsboost = true
+
+	while _G.fpsboost do
+		local LocalPlayer2 = game.Players.LocalPlayer
+		local v443 = LocalPlayer2.Character or LocalPlayer2.CharacterAdded:wait()
+
+		local function u444(p1)
+			for _, descendant in ipairs(p1:GetDescendants()) do
+				descendant:Destroy()
+			end
+		end
+
+		v443.ChildAdded:Connect(function(child)
+			-- upvalues: u444 (ref)
+			if child:IsA("Tool") then
+				u444(child)
+			end
+		end)
+
+		for _, child in ipairs(v443:GetChildren()) do
+			if child:IsA("Tool") then
+				u444(child)
+			end
+
+			task.wait()
+		end
+	end
+end
+
+paragraph2 = t1.Trade:AddParagraph({
+	Title = "Item Amount:",
+	Content = "0"
+})
+paragraph1 = t1.Trade:AddParagraph({
+	Title = "Remaining:",
+	Content = "0"
+})
+
+local function u13(p2, p3)
+	local v218 = string.len(p2)
+	local v219 = string.len(p3)
+	local t2 = {}
+
+	for i = 0, v218 do
+		t2[i] = {
+			[0] = i
+		}
+	end
+
+	for i = 0, v219 do
+		t2[0][i] = i
+	end
+
+	for i = 1, v218 do
+		for j = 1, v219 do
+			local v225 = p2:sub(i, i) == p3:sub(j, j) and 0 or 1
+
+			t2[i][j] = math.min(t2[i - 1][j] + 1, t2[i][j - 1] + 1, t2[i - 1][j - 1] + v225)
+		end
+	end
+
+	return t2[v218][v219]
+end
+local function u14(p4)
+	-- upvalues: u13 (ref)
+	local children = game:GetService("ReplicatedStorage").Items:GetChildren()
+	local v283 = nil
+	local huge = math.huge
+
+	for _, v in ipairs(children) do
+		local vName = v.Name
+
+		if string.lower(vName):sub(1, #p4) == string.lower(p4) then
+			local v288 = u13(p4:lower(), vName:lower())
+
+			if v288 < huge then
+				v283 = vName
+				huge = v288
+			end
+		end
+	end
+
+	return v283
+end
+local function u15(p5)
+	local LocalPlayer3 = game:GetService("Players").LocalPlayer
+
+	if LocalPlayer3 and LocalPlayer3.Items then
+		local v195 = LocalPlayer3.Items[p5]
+
+		if v195 then
+			return v195.Value
+		end
+	end
+
+	return 0
+end
+local function u16()
+	-- upvalues: u15 (ref)
+	local C = _G.C
+
+	if C then
+		local ok, result = pcall(u15, C)
+
+		if not ok then
+			if not ok then
+				paragraph2:SetDesc("Selected Item: " .. C .. ", Amount: " .. 0)
+			end
+		else
+			paragraph2:SetDesc("Selected Item: " .. C .. ", Amount: " .. result)
+		end
+	end
+end
+
+local u17 = t1.Trade:AddInput("Input", {
+	Title = "Item Name",
+	Default = "",
+	Placeholder = "Item Name",
+	Numeric = false,
+	Finished = false,
+	AutoComplete = function(p6)
+		local children = game:GetService("ReplicatedStorage").Items:GetChildren()
+		local t3 = {}
+
+		for _, v in ipairs(children) do
+			local vName = v.Name
+
+			if string.find(vName:lower(), p6:lower()) == 1 then
+				table.insert(t3, vName)
+			end
+		end
+
+		return t3
+	end,
+	Callback = function(p7)
+		-- upvalues: u14 (ref), u16 (ref)
+		local v141 = u14(p7)
+
+		if not v141 then
+			_G.C = nil
+			paragraph2:SetDesc("No matching item found.")
+		else
+			_G.C = v141
+			u16()
+		end
+	end
+})
+
+game:GetService("Players").LocalPlayer.Items.ChildAdded:Connect(u16)
+game:GetService("Players").LocalPlayer.Items.ChildRemoved:Connect(u16)
+t1.Trade:AddInput("Input", {
+	Title = "Amount",
+	Default = "",
+	Placeholder = "Trade Amount",
+	Numeric = true,
+	Finished = false,
+	Callback = function(p8)
+		_G.I = p8
+	end
+})
+t1.Trade:AddButton({
+	Title = "Set Item",
+	Description = "Hold the item to set the name of it",
+	Callback = function()
+		-- upvalues: u17 (ref)
+		local LocalPlayer4 = game.Players.LocalPlayer
+		local v301 = LocalPlayer4.Character or LocalPlayer4.CharacterAdded:wait()
+
+		for _, child in ipairs(v301:GetChildren()) do
+			if child:IsA("Tool") then
+				u17:SetValue(child.Name)
+				paragraph2:SetDesc("Selected Item: " .. child.Name .. ", Amount: " .. quantity)
+			end
+		end
+	end
+})
+
+local u18 = t1.Trade:AddToggle("Trade", {
+	Title = "Trade",
+	Default = false
+})
+
+u18:OnChanged(function()
+	-- upvalues: u18 (ref)
+	if not u18.Value then
+		_G.autodrop = false
+	else
+		_G.autodrop = true
+		_G.test = true
+
+		local v470 = game:GetService("Players").LocalPlayer.Items[_G.C].Value + -_G.I
+		local LocalPlayer5 = game.Players.LocalPlayer
+
+		equiptools()
+
+		local n1 = 15
+
+		while _G.autodrop == true do
+			paragraph1:SetDesc("Done when amount = " .. v470)
+
+			if v470 >= game:GetService("Players").LocalPlayer.Items[_G.C].Value then
+				task.wait(0.3)
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Jumped"):FireServer()
+
+				return
+			end
+
+			local n2 = 0
+
+			for _, child in pairs(workspace.Dropped:GetChildren()) do
+				if child:IsA("Model") and child:FindFirstChild("Owner") then
+					local Owner = child:FindFirstChild("Owner")
+
+					if Owner:IsA("ObjectValue") and LocalPlayer5 == Owner.Value then
+						n2 = n2 + 1
+					end
+				end
+			end
+
+			if n1 <= n2 then
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Jumped"):FireServer()
+			end
+
+			if n2 < n1 then
+				local v477 = false
+
+				for _, child in pairs(LocalPlayer5.Backpack:GetChildren()) do
+					if child.Name == _G.C then
+						v477 = true
+
+						break
+					end
+				end
+
+				if not v477 then
+					local Character = LocalPlayer5.Character
+
+					if Character then
+						for _, child in pairs(Character:GetChildren()) do
+							if child.Name == _G.C then
+								v477 = true
+
+								break
+							end
+						end
+					end
+				end
+
+				if v477 then
+					equiptools()
+					task.wait()
+
+					local t4 = {
+						[1] = _G.C
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Drop"):FireServer(unpack(t4))
+				else
+					local t5 = {
+						[1] = _G.C
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Equip"):FireServer(unpack(t5))
+				end
+			end
+
+			task.wait()
+		end
+	end
+end)
+u18:SetValue(false)
+
+local u19 = t1.PopItDropper:AddParagraph({
+	Title = "Item:",
+	Content = "0"
+})
+
+local function u20(p9, p10)
+	local v112 = string.len(p9)
+	local v113 = string.len(p10)
+	local t6 = {}
+
+	for i = 0, v112 do
+		t6[i] = {
+			[0] = i
+		}
+	end
+
+	for i = 0, v113 do
+		t6[0][i] = i
+	end
+
+	for i = 1, v112 do
+		for j = 1, v113 do
+			local v119 = p9:sub(i, i) == p10:sub(j, j) and 0 or 1
+
+			t6[i][j] = math.min(t6[i - 1][j] + 1, t6[i][j - 1] + 1, t6[i - 1][j - 1] + v119)
+		end
+	end
+
+	return t6[v112][v113]
+end
+local function u21(p11)
+	-- upvalues: u20 (ref)
+	local children = game:GetService("ReplicatedStorage").Items:GetChildren()
+	local v425 = nil
+	local huge = math.huge
+
+	for _, v in ipairs(children) do
+		local vName = v.Name
+
+		if string.lower(vName):sub(1, #p11) == string.lower(p11) then
+			local v430 = u20(p11:lower(), vName:lower())
+
+			if v430 < huge then
+				v425 = vName
+				huge = v430
+			end
+		end
+	end
+
+	return v425
+end
+local function u22(p12)
+	local LocalPlayer6 = game:GetService("Players").LocalPlayer
+
+	if LocalPlayer6 and LocalPlayer6.Items then
+		local v450 = LocalPlayer6.Items[p12]
+
+		if v450 then
+			return v450.Value
+		end
+	end
+
+	return 0
+end
+local function u23()
+	-- upvalues: u22 (ref), u19 (ref)
+	local C = _G.C
+
+	if C then
+		local ok, result = pcall(u22, C)
+
+		if not ok then
+			if not ok then
+				u19:SetDesc("Selected Item: " .. C .. ", Amount: " .. 0)
+			end
+		else
+			u19:SetDesc("Selected Item: " .. C .. ", Amount: " .. result)
+		end
+	end
+end
+
+local u24 = t1.PopItDropper:AddInput("Input", {
+	Title = "Item Name",
+	Default = "",
+	Placeholder = "Item Name",
+	Numeric = false,
+	Finished = false,
+	AutoComplete = function(p13)
+		local children = game:GetService("ReplicatedStorage").Items:GetChildren()
+		local t7 = {}
+
+		for _, v in ipairs(children) do
+			local vName = v.Name
+
+			if string.find(vName:lower(), p13:lower()) == 1 then
+				table.insert(t7, vName)
+			end
+		end
+
+		return t7
+	end,
+	Callback = function(p14)
+		-- upvalues: u21 (ref), u23 (ref), u19 (ref)
+		local v280 = u21(p14)
+
+		if not v280 then
+			_G.C = nil
+			u19:SetDesc("No matching item found.")
+		else
+			_G.C = v280
+			u23()
+		end
+	end
+})
+
+game:GetService("Players").LocalPlayer.Items.ChildAdded:Connect(u23)
+game:GetService("Players").LocalPlayer.Items.ChildRemoved:Connect(u23)
+
+local u25 = t1.PopItDropper:AddToggle("EnableInventory", {
+	Title = "Enable/Disable Inventory",
+	Default = false
+})
+
+u25:OnChanged(function()
+	-- upvalues: u25 (ref)
+	if not u25.Value then
+		game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+	else
+		game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, true)
+	end
+end)
+u25:SetValue(false)
+t1.PopItDropper:AddButton({
+	Title = "Set Item",
+	Description = "Hold the item to set the name of it",
+	Callback = function()
+		-- upvalues: u4 (ref), u24 (ref), u19 (ref)
+		for _, child in ipairs(u4:GetChildren()) do
+			if child:IsA("Tool") then
+				u24:SetValue(child.Name)
+				u19:SetDesc("Selected Item: " .. child.Name .. ", Amount: " .. quantity)
+			end
+		end
+	end
+})
+t1.PopItDropper:AddSection("Auto")
+
+local u26 = t1.PopItDropper:AddToggle("Collector", {
+	Title = "Auto Collect",
+	Default = false
+})
+
+u26:OnChanged(function()
+	-- upvalues: u26 (ref)
+	if not u26.Value then
+		_G.banana = false
+	else
+		_G.banana = true
+
+		while _G.banana do
+			local t8 = {
+				[1] = _G.C or ""
+			}
+
+			game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Equip"):FireServer(unpack(t8))
+			task.wait()
+		end
+	end
+end)
+u26:SetValue(false)
+
+local u27 = t1.PopItDropper:AddToggle("Auto Drop", {
+	Title = "Auto Drop",
+	Default = false
+})
+
+u27:OnChanged(function()
+	-- upvalues: u27 (ref)
+	if not u27.Value then
+		_G.autodrop = false
+	else
+		_G.autodrop = true
+
+		local LocalPlayer7 = game.Players.LocalPlayer
+
+		equiptools()
+
+		while _G.autodrop == true do
+			local n3 = 0
+
+			for _, child in pairs(workspace.Dropped:GetChildren()) do
+				if child:IsA("Model") and child:FindFirstChild("Owner") then
+					local Owner = child:FindFirstChild("Owner")
+
+					if Owner:IsA("ObjectValue") and LocalPlayer7 == Owner.Value then
+						n3 = n3 + 1
+					end
+				end
+			end
+
+			if n3 < 15 then
+				local v462 = false
+
+				for _, child in pairs(LocalPlayer7.Backpack:GetChildren()) do
+					if child.Name == _G.C then
+						v462 = true
+
+						break
+					end
+				end
+
+				if not v462 then
+					local Character = LocalPlayer7.Character
+
+					if Character then
+						for _, child in pairs(Character:GetChildren()) do
+							if child.Name == _G.C then
+								v462 = true
+
+								break
+							end
+						end
+					end
+				end
+
+				if v462 then
+					equiptools()
+					task.wait()
+
+					local t9 = {
+						[1] = _G.C
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Drop"):FireServer(unpack(t9))
+				else
+					local t10 = {
+						[1] = _G.C
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Equip"):FireServer(unpack(t10))
+				end
+			end
+
+			task.wait()
+		end
+	end
+end)
+u27:SetValue(false)
+
+local v28 = t1.PopItDropper:AddToggle("AutoBuy", {
+	Title = "Auto Buy",
+	Default = false
+})
+local BuyItemCash = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash")
+local connection = nil
+
+local function u31()
+	-- upvalues: BuyItemCash (ref)
+	local t11 = {
+		[1] = _G.C or ""
+	}
+
+	BuyItemCash:FireServer(unpack(t11))
+end
+
+v28:OnChanged(function(p15)
+	-- upvalues: connection (ref), RunService (ref), u31 (ref)
+	if not p15 then
+		if connection then
+			connection:Disconnect()
+		end
+	else
+		connection = RunService.Heartbeat:Connect(function()
+			-- upvalues: u31 (ref)
+			task.spawn(u31)
+		end)
+	end
+end)
+v28:SetValue(false)
+
+local u32 = t1.PopItDropper:AddToggle("Auto Drop", {
+	Title = "Auto Sell",
+	Default = false
+})
+
+u32:OnChanged(function()
+	-- upvalues: u32 (ref)
+	if not u32.Value then
+		_G.autodrop = false
+	else
+		_G.autodrop = true
+
+		local _ = game.Players.LocalPlayer
+
+		equiptools()
+
+		local LocalPlayer8 = game.Players.LocalPlayer
+
+		while _G.autodrop == true do
+			local n4 = 0
+
+			for _, child in pairs(workspace.Dropped:GetChildren()) do
+				if child:IsA("Model") and child:FindFirstChild("Owner") then
+					local Owner = child:FindFirstChild("Owner")
+
+					if Owner:IsA("ObjectValue") and LocalPlayer8 == Owner.Value then
+						n4 = n4 + 1
+					end
+				end
+			end
+
+			if n4 < 15 then
+				local v170 = false
+
+				for _, child in pairs(LocalPlayer8.Backpack:GetChildren()) do
+					if child.Name == _G.C then
+						v170 = true
+
+						break
+					end
+				end
+
+				if not v170 then
+					local Character = LocalPlayer8.Character
+
+					if Character then
+						for _, child in pairs(Character:GetChildren()) do
+							if child.Name == _G.C then
+								v170 = true
+
+								break
+							end
+						end
+					end
+				end
+
+				if v170 then
+					equiptools()
+					task.wait()
+
+					local t12 = {
+						[1] = _G.C
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Sell"):FireServer(unpack(t12))
+				else
+					local t13 = {
+						[1] = _G.C
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Equip"):FireServer(unpack(t13))
+				end
+			end
+
+			task.wait()
+		end
+	end
+end)
+u32:SetValue(false)
+t1.PopItDropper:AddSection("Other")
+
+local u33 = t1.PopItDropper:AddToggle("Autofarm Jets", {
+	Title = "Farm Jets",
+	Default = false
+})
+
+u33:OnChanged(function()
+	-- upvalues: u33 (ref)
+	if not u33.Value then
+		autojetpackLoop = false
+	else
+		autojetpackLoop = true
+
+		while autojetpackLoop do
+			local t14 = {
+				[1] = "Reward"
+			}
+
+			game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("FireTrigger"):FireServer(unpack(t14))
+			task.wait()
+		end
+	end
+end)
+u33:SetValue(false)
+t1.Visual:AddSection("Edit")
+t1.Visual:AddInput("Cash", {
+	Title = "Cash",
+	Default = "",
+	Placeholder = "Num",
+	Numeric = true,
+	Finished = false,
+	Callback = function(p16)
+		_G.cash = true
+		game:GetService("Players").LocalPlayer.Cash.Value = p16
+	end
+}):OnChanged(function()
+end)
+
+local u34 = t1.Misc:AddToggle("AutoJump", {
+	Title = "Auto A/D",
+	Default = false
+})
+
+u34:OnChanged(function()
+	-- upvalues: u34 (ref)
+	if u34.Value then
+		while u34.Value do
+			game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Jumped"):FireServer()
+			task.wait(0.5)
+		end
+	end
+end)
+
+local u35 = t1.Misc:AddToggle("AntiGrab", {
+	Title = "Anti Grab",
+	Default = false
+})
+
+u35:OnChanged(function()
+	-- upvalues: u35 (ref), Dropped (ref)
+	while u35.Value do
+		for _, child in pairs(Dropped:GetChildren()) do
+			if child:IsA("Model") then
+				handle = child:FindFirstChild("Handle")
+
+				if handle then
+					handle.CanTouch = false
+				end
+			end
+		end
+
+		task.wait()
+
+		if not u35.Value and handle then
+			handle.CanTouch = true
+		end
+	end
+end)
+u35:SetValue(false)
+
+local u36 = t1.Misc:AddToggle("AutoGrab", {
+	Title = "Auto Grab All",
+	Default = false
+})
+
+u36:OnChanged(function()
+	-- upvalues: u36 (ref), Dropped (ref)
+	while u36.Value do
+		for _, descendant in pairs(Dropped:GetDescendants()) do
+			local HumanoidRootPart = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+			if descendant:IsA("TouchTransmitter") then
+				firetouchinterest(HumanoidRootPart, descendant.Parent, 0)
+			end
+		end
+
+		task.wait()
+	end
+end)
+u36:SetValue(false)
+
+local u37 = t1.Misc:AddToggle("AntiSit", {
+	Title = "Anti Sit",
+	Default = false
+})
+local u38 = nil
+
+u37:OnChanged(function()
+	-- upvalues: u37 (ref), u38 (ref)
+	if not u37.Value then
+		u38 = false
+	else
+		u38 = true
+
+		while u38 do
+			game.Players.LocalPlayer.Character:WaitForChild("Humanoid").Sit = false
+			task.wait()
+		end
+	end
+end)
+u37:SetValue(false)
+
+local u39 = t1.Misc:AddToggle("Freeze Items", {
+	Title = "Freeze Items",
+	Default = false
+})
+
+local function u40(p17, p18)
+	for _, descendant in pairs(p17:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			descendant.Anchored = p18
+		end
+	end
+end
+local function u41()
+	-- upvalues: u39 (ref), u40 (ref)
+	while u39.Value do
+		task.wait()
+
+		local Dropped2 = workspace:FindFirstChild("Dropped")
+
+		if Dropped2 then
+			for _, child in pairs(Dropped2:GetChildren()) do
+				if child:IsA("Model") then
+					u40(child, true)
+				end
+			end
+		end
+	end
+
+	local Dropped3 = workspace:FindFirstChild("Dropped")
+
+	if Dropped3 then
+		for _, child in pairs(Dropped3:GetChildren()) do
+			if child:IsA("Model") then
+				u40(child, false)
+			end
+		end
+	end
+end
+
+u39:OnChanged(function()
+	-- upvalues: u39 (ref), u41 (ref)
+	if u39.Value then
+		spawn(u41)
+	end
+end)
+u39:SetValue(false)
+
+local u42 = t1.Misc:AddToggle("Death/Fling Fix", {
+	Title = "Freeze Player",
+	Default = false
+})
+
+u42:OnChanged(function()
+	-- upvalues: u42 (ref)
+	if not u42.Value then
+		local Character = game.Players.LocalPlayer.Character
+
+		if Character then
+			for _, descendant in ipairs(Character:GetDescendants()) do
+				if descendant:IsA("BasePart") then
+					descendant.Anchored = false
+				end
+			end
+		end
+	else
+		local Character = game.Players.LocalPlayer.Character
+
+		if Character then
+			for _, descendant in ipairs(Character:GetDescendants()) do
+				if descendant:IsA("BasePart") then
+					descendant.Anchored = true
+				end
+			end
+		end
+	end
+end)
+u42:SetValue(false)
+t1.Misc:AddSection("Other")
+
+local u43 = t1.Misc:AddToggle("Wheel", {
+	Title = "Auto Spin Wheel",
+	Default = false
+})
+
+u43:OnChanged(function()
+	-- upvalues: u43 (ref)
+	while u43.Value do
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("SpinWheel"):InvokeServer()
+		task.wait()
+	end
+end)
+u43:SetValue(false)
+
+local u44 = t1.Misc:AddToggle("Wheel", {
+	Title = "Auto Daily Gift",
+	Default = false
+})
+
+u44:OnChanged(function()
+	-- upvalues: u44 (ref)
+	while u44.Value do
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("ClaimCalendarDay"):InvokeServer()
+		task.wait(0.2)
+	end
+end)
+u44:SetValue(false)
+t1.Misc:AddButton({
+	Title = "Get Event Items",
+	Description = "",
+	Callback = function()
+		local Rewards = workspace.CandyRealm.Rewards
+		local Rewards2 = workspace.MorsRealm.Rewards
+
+		local function v350(p19)
+			for _, descendant in ipairs(p19:GetDescendants()) do
+				if descendant.Name == "Hit" then
+					firetouchinterest(game.Players.LocalPlayer.Character.HumanoidRootPart, descendant, 0)
+				end
+			end
+		end
+
+		v350(Rewards)
+		v350(Rewards2)
+	end
+})
+t1.Misc:AddButton({
+	Title = "Fps Boost",
+	Description = "",
+	Callback = function()
+		-- upvalues: u12 (ref)
+		u12()
+	end
+})
+t1.Misc:AddButton({
+	Title = "Safe Place",
+	Description = "",
+	Callback = function()
+		if teleported then
+			game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(85.0630569, 17.9703007, -268.694305)
+		else
+			local Part = Instance.new("Part")
+
+			Part.Name = "Safe Place"
+			Part.Anchored = true
+			Part.Size = Vector3.new(70, 1, 70)
+			Part.CFrame = CFrame.new(52232, 112.6436, 1240)
+			Part.BrickColor = BrickColor.new("Pink")
+			Part.Parent = game.Workspace
+			game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(52232, 116.6436, 1240)
+		end
+
+		teleported = not teleported
+	end
+})
+t1.Misc:AddButton({
+	Title = "Remove Items",
+	Description = "",
+	Callback = function()
+		remove()
+	end
+})
+
+local function u45(p20)
+	local t15 = {
+		"K",
+		"M",
+		"B",
+		"T",
+		"Qd",
+		"Qn",
+		"Sx",
+		"Sp",
+		"Oc",
+		"No",
+		"Dc",
+		"Ud",
+		"Dd",
+		"Td",
+		"Sd",
+		"St",
+		"Od",
+		"Nd",
+		"Vg"
+	}
+	local n5 = 1
+
+	while p20 >= 1000 and n5 < #t15 + 1 do
+		p20 = p20 / 1000
+		n5 = n5 + 1
+	end
+
+	if n5 ~= 1 then
+		if not (n5 < #t15) then
+			return "inf"
+		end
+
+		return string.format("%.3f%s", p20, t15[n5 - 1])
+	end
+
+	return string.format("%d", p20)
+end
+
+t1.Visual:AddInput("Cash", {
+	Title = "Leaderboard Cash",
+	Default = "",
+	Placeholder = "Num",
+	Numeric = true,
+	Finished = false,
+	Callback = function(p21)
+		-- upvalues: u45 (ref)
+		local v298 = tonumber(p21) or 0;
+
+		(function(p22, p23, p24)
+			for _, descendant in pairs(game:GetDescendants()) do
+				if descendant:IsA(p23) and p22 == descendant.Name then
+					descendant.Text = p24
+
+					return true
+				end
+			end
+
+			return false
+		end)("Cash", "TextLabel", "$" .. u45(v298))
+	end
+})
+
+local function u46(p25)
+	local t16 = {
+		"K",
+		"M",
+		"B",
+		"T",
+		"Qd",
+		"Qn",
+		"Sx",
+		"Sp",
+		"Oc",
+		"No",
+		"Dc",
+		"Ud",
+		"Dd",
+		"Td",
+		"Sd",
+		"St",
+		"Od",
+		"Nd",
+		"Vg"
+	}
+	local n6 = 1
+
+	while p25 >= 1000 and n6 < #t16 + 1 do
+		p25 = p25 / 1000
+		n6 = n6 + 1
+	end
+
+	if n6 ~= 1 then
+		if not (n6 < #t16) then
+			return "inf"
+		end
+
+		return string.format("%.3f%s", p25, t16[n6 - 1])
+	end
+
+	return string.format("%d", p25)
+end
+
+t1.Visual:AddInput("Assets", {
+	Title = "Leaderboard Inventory",
+	Default = "",
+	Placeholder = "Num",
+	Numeric = true,
+	Finished = false,
+	Callback = function(p26)
+		-- upvalues: u46 (ref)
+		local v410 = tonumber(p26) or 0;
+
+		(function(p27, p28, p29)
+			for _, descendant in pairs(game:GetDescendants()) do
+				if descendant:IsA(p28) and p27 == descendant.Name then
+					descendant.Text = p29
+
+					return true
+				end
+			end
+
+			return false
+		end)("Assets", "TextLabel", "$" .. u46(v410))
+	end
+})
+
+local function u47(p30)
+	local t17 = {
+		"K",
+		"M",
+		"B",
+		"T",
+		"Qd",
+		"Qn",
+		"Sx",
+		"Sp",
+		"Oc",
+		"No",
+		"Dc",
+		"Ud",
+		"Dd",
+		"Td",
+		"Sd",
+		"St",
+		"Od",
+		"Nd",
+		"Vg"
+	}
+	local n7 = 1
+
+	while p30 >= 1000 and n7 < #t17 + 1 do
+		p30 = p30 / 1000
+		n7 = n7 + 1
+	end
+
+	if n7 ~= 1 then
+		if not (n7 < #t17) then
+			return "inf"
+		end
+
+		return string.format("%.3f%s", p30, t17[n7 - 1])
+	end
+
+	return string.format("%d", p30)
+end
+
+t1.Visual:AddInput("NetWorth", {
+	Title = "Leaderboard Total",
+	Default = "",
+	Placeholder = "Num",
+	Numeric = true,
+	Finished = false,
+	Callback = function(p31)
+		-- upvalues: u47 (ref)
+		local v376 = tonumber(p31) or 0;
+
+		(function(p32, p33, p34)
+			for _, descendant in pairs(game:GetDescendants()) do
+				if descendant:IsA(p33) and p32 == descendant.Name then
+					descendant.Text = p34
+
+					return true
+				end
+			end
+
+			return false
+		end)("NetWorth", "TextLabel", "$" .. u47(v376))
+	end
+})
+
+local u48 = t1.Visual:AddToggle("Leaderboard Update", {
+	Title = "Leaderboard/Cash Update",
+	Default = false
+})
+
+u48:OnChanged(function()
+	-- upvalues: u48 (ref)
+	if not u48.Value then
+		game:GetService("Players").LocalPlayer.PlayerGui.Leaderboards.LeaderboardUpdate.Enabled = false
+	else
+		game:GetService("Players").LocalPlayer.PlayerGui.Leaderboards.LeaderboardUpdate.Enabled = true
+	end
+end)
+u48:SetValue(true)
+t1.Visual:AddSection("Items")
+t1.Visual:AddButton({
+	Title = "Get Golden Ticket",
+	Callback = function()
+		-- upvalues: Humanoid (ref)
+		local ReplicatedStorage2 = game:GetService("ReplicatedStorage")
+		local Players = game:GetService("Players")
+		local Workspace = game:GetService("Workspace")
+		local LocalPlayer9 = Players.LocalPlayer
+
+		if LocalPlayer9 then
+			local v132 = ReplicatedStorage2.Items["Golden Ticket"]
+
+			if v132 then
+				local v133 = LocalPlayer9.Character or LocalPlayer9.CharacterAdded:wait()
+				local clone = v132:Clone()
+
+				clone.Parent = v133
+				task.wait()
+				Humanoid:EquipTool(clone)
+
+				local v135 = Workspace:FindFirstChild("GoldenToilet") and Workspace.GoldenToilet:FindFirstChild("HitDetect")
+
+				if v135 then
+					v135:Destroy()
+				end
+			end
+		end
+	end
+})
+
+function updatetool()
+	-- upvalues: u4 (ref)
+	tool = u4:FindFirstChildOfClass("Tool")
+end
+function unequiptools()
+	-- upvalues: LocalPlayer (ref)
+	LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):UnequipTools()
+end
+function equiptools()
+	-- upvalues: LocalPlayer (ref)
+	for _, child in pairs(LocalPlayer:FindFirstChildOfClass("Backpack"):GetChildren()) do
+		if child:IsA("Tool") or child:IsA("HopperBin") then
+			child.Parent = LocalPlayer.Character
+		end
+	end
+end
+
+t1.Fun:AddSection("FE")
+
+local t18 = {}
+
+local function u50()
+	-- upvalues: t18 (ref)
+	t18 = { "All" }
+
+	for _, player in pairs(game.Players:GetPlayers()) do
+		table.insert(t18, player.Name)
+	end
+end
+
+local u51 = nil
+
+local function v52()
+	-- upvalues: u50 (ref), u51 (ref), t18 (ref)
+	u50()
+	u51:SetValues(t18)
+end
+
+u51 = t1.Fun:AddDropdown("Dropdown", {
+	Title = "Target",
+	Values = t18,
+	Multi = false,
+	Default = "All"
+})
+game.Players.PlayerAdded:Connect(v52)
+game.Players.PlayerRemoving:Connect(v52)
+v52()
+t1.Fun:AddButton({
+	Title = "Void",
+	Description = "Drop Any Item (Buggy)",
+	Callback = function()
+		-- upvalues: u51 (ref), t18 (ref)
+		pcall(function()
+			-- upvalues: u51 (ref), t18 (ref)
+			local g547 = nil
+
+			repeat
+				while u51.Value == "All" do
+					if #t18 == 1 then
+						return
+					end
+
+					local v541
+
+					repeat
+						v541 = t18[math.random(2, #t18)]
+					until v541 ~= game.Players.LocalPlayer.Name
+
+					local v542 = game.Players[v541] and (game.Players[v541].Character and game.Players[v541].Character:FindFirstChild("Head"))
+
+					if v542 then
+						local descendants = game.Workspace:WaitForChild("Dropped"):GetDescendants()
+						local v544 = false
+
+						for _, v in pairs(descendants) do
+							if not v:IsA("BasePart") then
+								g547 = true
+							end
+
+							if not g547 then
+								local ObjectValue = v.Parent:FindFirstChildOfClass("ObjectValue")
+
+								if not ObjectValue or ObjectValue.Value ~= game.Players.LocalPlayer then
+									g547 = true
+								end
+
+								if not g547 then
+									v544 = true
+
+									if not v:FindFirstChildOfClass("BodyAngularVelocity") then
+										local huge = math.huge
+										local BodyAngularVelocity = Instance.new("BodyAngularVelocity")
+
+										BodyAngularVelocity.AngularVelocity = Vector3.new(math.huge, huge, math.huge)
+										BodyAngularVelocity.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+										BodyAngularVelocity.Parent = v
+									end
+
+									local timestamp = tick()
+
+									repeat
+										local g552 = false
+
+										if v542.Parent and v542.Parent:FindFirstChild("HumanoidRootPart") and v.Parent then
+											v.CFrame = v542.CFrame
+											v.CanCollide = false
+											task.wait()
+
+											if not (tick() - timestamp >= 1) then
+												g552 = true
+											end
+										end
+									until not g552
+								end
+							end
+
+							g547 = false
+						end
+
+						if not v544 then
+							return
+						end
+					end
+
+					task.wait(0.1)
+				end
+
+				local v553 = game.Players[u51.Value] and (game.Players[u51.Value].Character and game.Players[u51.Value].Character:FindFirstChild("HumanoidRootPart"))
+				local descendants = game.Workspace:WaitForChild("Dropped"):GetDescendants()
+				local v555 = false
+
+				for _, v in pairs(descendants) do
+					if v:IsA("BasePart") then
+						local ObjectValue = v.Parent:FindFirstChildOfClass("ObjectValue")
+
+						if ObjectValue and ObjectValue.Value == game.Players.LocalPlayer then
+							v555 = true
+
+							if not v:FindFirstChildOfClass("BodyAngularVelocity") then
+								local huge = math.huge
+								local BodyAngularVelocity = Instance.new("BodyAngularVelocity")
+
+								BodyAngularVelocity.AngularVelocity = Vector3.new(math.huge, huge, math.huge)
+								BodyAngularVelocity.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+								BodyAngularVelocity.Parent = v
+							end
+
+							while v553.Parent and v553.Parent:FindFirstChild("HumanoidRootPart") and v.Parent do
+								v.CFrame = v553.CFrame
+								v.CanCollide = false
+								task.wait()
+							end
+						end
+					end
+				end
+			until not v555
+		end)
+	end
+})
+t1.Fun:AddButton({
+	Title = "Fling",
+	Description = "Drop Any Item",
+	Callback = function()
+		-- upvalues: u51 (ref), t18 (ref)
+		pcall(function()
+			-- upvalues: u51 (ref), t18 (ref)
+			local g509 = nil
+
+			repeat
+				while u51.Value == "All" do
+					if #t18 == 1 then
+						return
+					end
+
+					local v503
+
+					repeat
+						v503 = t18[math.random(2, #t18)]
+					until v503 ~= game.Players.LocalPlayer.Name
+
+					local v504 = game.Players[v503] and (game.Players[v503].Character and game.Players[v503].Character:FindFirstChild("HumanoidRootPart"))
+
+					if v504 then
+						local descendants = game.Workspace:WaitForChild("Dropped"):GetDescendants()
+						local v506 = false
+
+						for _, v in pairs(descendants) do
+							if not v:IsA("BasePart") then
+								g509 = true
+							end
+
+							if not g509 then
+								local ObjectValue = v.Parent:FindFirstChildOfClass("ObjectValue")
+
+								if not ObjectValue or ObjectValue.Value ~= game.Players.LocalPlayer then
+									g509 = true
+								end
+
+								if not g509 then
+									v506 = true
+
+									if not v:FindFirstChildOfClass("BodyAngularVelocity") then
+										local v511 = math.random(5000, 5000)
+										local BodyAngularVelocity = Instance.new("BodyAngularVelocity")
+
+										BodyAngularVelocity.AngularVelocity = Vector3.new(0, v511, 0)
+										BodyAngularVelocity.MaxTorque = Vector3.new(0, math.huge, 0)
+										BodyAngularVelocity.Parent = v
+									end
+
+									local timestamp = tick()
+
+									repeat
+										local g514 = false
+
+										if v504.Parent and v504.Parent:FindFirstChild("HumanoidRootPart") and v.Parent then
+											v.CFrame = v504.CFrame
+											v.CanCollide = false
+											task.wait()
+
+											if not (tick() - timestamp >= 1) then
+												g514 = true
+											end
+										end
+									until not g514
+								end
+							end
+
+							g509 = false
+						end
+
+						if not v506 then
+							return
+						end
+					end
+
+					task.wait(0.1)
+				end
+
+				local v515 = game.Players[u51.Value] and (game.Players[u51.Value].Character and game.Players[u51.Value].Character:FindFirstChild("HumanoidRootPart"))
+				local descendants = game.Workspace:WaitForChild("Dropped"):GetDescendants()
+				local v517 = false
+
+				for _, v in pairs(descendants) do
+					if v:IsA("BasePart") then
+						local ObjectValue = v.Parent:FindFirstChildOfClass("ObjectValue")
+
+						if ObjectValue and ObjectValue.Value == game.Players.LocalPlayer then
+							v517 = true
+
+							if not v:FindFirstChildOfClass("BodyAngularVelocity") then
+								local v521 = math.random(5000, 10000)
+								local BodyAngularVelocity = Instance.new("BodyAngularVelocity")
+
+								BodyAngularVelocity.AngularVelocity = Vector3.new(0, v521, 0)
+								BodyAngularVelocity.MaxTorque = Vector3.new(0, math.huge, 0)
+								BodyAngularVelocity.Parent = v
+							end
+
+							while v515.Parent and v515.Parent:FindFirstChild("HumanoidRootPart") and v.Parent do
+								v.CFrame = v515.CFrame
+								v.CanCollide = false
+								task.wait()
+							end
+						end
+					end
+				end
+			until not v517
+		end)
+	end
+})
+t1.Fun:AddButton({
+	Title = "Big Item",
+	Callback = function()
+		-- upvalues: u1 (ref)
+		local ok, _ = pcall(function()
+			dollhouse = workspace.Dropped:FindFirstChild("Doll House"):GetDescendants()
+
+			return dollhouse
+		end)
+
+		if not ok then
+			if not ok then
+				local t19 = {
+					[1] = "Doll House"
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Equip"):FireServer(unpack(t19))
+				u1:Notify({
+					Title = "Uni Hub",
+					Content = "Drop Doll House",
+					Duration = 2
+				})
+			end
+		else
+			for _, v in pairs(dollhouse) do
+				pcall(function()
+					-- upvalues: v (ref)
+					clickdetector = v:FindFirstChildOfClass("ClickDetector")
+				end)
+
+				if clickdetector then
+					unequiptools()
+					task.wait()
+					fireclickdetector(clickdetector)
+					task.wait(0.3)
+					equiptools()
+					task.wait()
+					fireclickdetector(clickdetector)
+				end
+			end
+		end
+	end
+})
+t1.Fun:AddButton({
+	Title = "Small Item",
+	Callback = function()
+		-- upvalues: u1 (ref)
+		local ok, _ = pcall(function()
+			dollhouse = workspace.Dropped:FindFirstChild("Doll House"):GetDescendants()
+
+			return dollhouse
+		end)
+
+		if not ok then
+			if not ok then
+				local t20 = {
+					[1] = "Doll House"
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Equip"):FireServer(unpack(t20))
+				u1:Notify({
+					Title = "Uni Hub",
+					Content = "Drop Doll House",
+					Duration = 2
+				})
+			end
+		else
+			for _, v in pairs(dollhouse) do
+				pcall(function()
+					-- upvalues: v (ref)
+					clickdetector = v:FindFirstChildOfClass("ClickDetector")
+				end)
+
+				if clickdetector then
+					unequiptools()
+					task.wait()
+					equiptools()
+					task.wait()
+					fireclickdetector(clickdetector)
+					task.wait()
+					unequiptools()
+					task.wait(0.3)
+					fireclickdetector(clickdetector)
+					task.wait()
+					equiptools()
+				end
+			end
+		end
+	end
+})
+t1.Fun:AddButton({
+	Title = "Banana penis",
+	Description = "needs Rainbow Banana",
+	Callback = function()
+		local LocalPlayer10 = game.Players.LocalPlayer
+		local v197 = game:GetService("Players").LocalPlayer.Items:FindFirstChild("Rainbow Banana")
+
+		if v197 then
+			if v197 then
+				local t21 = {
+					[1] = "Rainbow Banana"
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Equip"):FireServer(unpack(t21))
+			end
+		else
+			local t22 = {
+				[1] = "Rainbow Banana"
+			}
+
+			game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t22))
+		end
+
+		task.wait(0.3)
+		updatetool()
+		tool.Grip = tool.Grip * CFrame.new(1.2, 2, -1.9)
+		unequiptools()
+		task.wait(0.3)
+		LocalPlayer10.Character.Humanoid:EquipTool(tool)
+	end
+})
+t1.Fun:AddSection("VIP")
+t1.Fun:AddInput("Input", {
+	Title = "Report Message",
+	Default = "",
+	Placeholder = "Message",
+	Numeric = false,
+	Finished = false,
+	Callback = function(p35)
+		_G.R = p35
+	end
+})
+
+local u53 = t1.Fun:AddToggle("Leaderboard Update", {
+	Title = "Spam Report",
+	Default = false
+})
+
+u53:OnChanged(function()
+	-- upvalues: u53 (ref)
+	while u53.Value do
+		local t23 = {
+			[1] = _G.R
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("reportGuilded"):FireServer(unpack(t23))
+		task.wait()
+	end
+end)
+u53:SetValue(false)
+t1.Fun:AddSection("Scam")
+t1.Fun:AddButton({
+	Title = "Fake Jump",
+	Callback = function()
+		(game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:wait()):WaitForChild("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+	end
+})
+
+local u54 = t1.Craft:AddToggle("EnableInventory", {
+	Title = "Auto Craft The All Seeing Eye",
+	Default = false
+})
+
+u54:OnChanged(function()
+	-- upvalues: u54 (ref), LocalPlayer (ref)
+	if not u54.Value then
+		_G.craft = false
+	else
+		_G.craft = true
+
+		while _G.craft do
+			local HumanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+			for _, child in pairs(workspace.Dropped:GetChildren()) do
+				pcall(function()
+					-- upvalues: child (ref), LocalPlayer (ref), HumanoidRootPart (ref)
+					if child:FindFirstChild("Owner").Value == LocalPlayer then
+						local children = child:GetChildren()
+
+						for _, v in ipairs(children) do
+							if v:IsA("BasePart") then
+								v.CanCollide = false
+								v.CFrame = HumanoidRootPart.CFrame
+							end
+						end
+					end
+				end)
+			end
+
+			local ok = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items["Demon Eye"]
+			end)
+			local ok2 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items["Angel Eye"]
+			end)
+			local ok3 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Eie
+			end)
+			local ok4 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Eyye
+			end)
+			local ok5 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Eye
+			end)
+			local ok6 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Fire
+			end);
+
+			({})[1] = "Demon Eye"
+
+			local t24 = {
+				[1] = "Angel Eye"
+			}
+			local t25 = {
+				[1] = "Eie"
+			}
+			local t26 = {
+				[1] = "Eyye"
+			}
+			local t27 = {
+				[1] = "Eye"
+			}
+			local t28 = {
+				[1] = "Fire"
+			}
+
+			if not ok or not ok2 or not ok3 or not ok4 then
+				if ok then
+					if ok2 then
+						if ok3 then
+							if not ok4 then
+								game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t26))
+							end
+						else
+							game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t25))
+						end
+					else
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t24))
+					end
+				elseif not ok5 or not ok6 then
+					if ok5 then
+						if not ok6 then
+							game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t28))
+						end
+					else
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t27))
+					end
+				else
+					local t29 = {
+						[1] = {
+							["1"] = "Eye",
+							["2"] = "Fire"
+						}
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(unpack(t29))
+				end
+			else
+				local t30 = {
+					[1] = {
+						["1"] = "Demon Eye",
+						["3"] = "Angel Eye",
+						["5"] = "Eie",
+						["7"] = "Eyye"
+					}
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(unpack(t30))
+			end
+
+			task.wait()
+		end
+
+		task.wait()
+	end
+end)
+
+local u55 = t1.Craft:AddToggle("EnableInventory", {
+	Title = "Auto Craft Plunger Bow",
+	Default = false
+})
+
+u55:OnChanged(function()
+	-- upvalues: u55 (ref), LocalPlayer (ref)
+	if not u55.Value then
+		_G.craft = false
+	else
+		_G.craft = true
+
+		while _G.craft do
+			local HumanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+			for _, child in pairs(workspace.Dropped:GetChildren()) do
+				pcall(function()
+					-- upvalues: child (ref), LocalPlayer (ref), HumanoidRootPart (ref)
+					if child:FindFirstChild("Owner").Value == LocalPlayer then
+						local children = child:GetChildren()
+
+						for _, v in ipairs(children) do
+							if v:IsA("BasePart") then
+								v.CanCollide = false
+								v.CFrame = HumanoidRootPart.CFrame
+							end
+						end
+					end
+				end)
+			end
+
+			local ok = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Knife
+			end)
+			local ok7 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Plunger
+			end)
+			local ok8 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items["Palm Tree"]
+			end)
+			local t31 = {
+				[1] = "Knife"
+			}
+			local t32 = {
+				[1] = "Plunger"
+			}
+			local t33 = {
+				[1] = "Palm Tree"
+			}
+
+			if not ok or not ok7 or not ok8 then
+				if ok then
+					if ok7 then
+						if not ok8 then
+							game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t33))
+						end
+					else
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t32))
+					end
+				else
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t31))
+				end
+			else
+				local t34 = {
+					[1] = {
+						["3"] = "Knife",
+						["5"] = "Plunger",
+						["6"] = "Palm Tree"
+					}
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(unpack(t34))
+			end
+
+			task.wait()
+		end
+
+		task.wait()
+	end
+end)
+
+local u56 = t1.Craft:AddToggle("EnableInventory", {
+	Title = "Auto Craft Singularity",
+	Description = "Needs 'Nothing' ",
+	Default = false
+})
+
+u56:OnChanged(function()
+	-- upvalues: u56 (ref), LocalPlayer (ref)
+	if not u56.Value then
+		_G.craft = false
+	else
+		_G.craft = true
+
+		while _G.craft do
+			local HumanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+			for _, child in pairs(workspace.Dropped:GetChildren()) do
+				pcall(function()
+					-- upvalues: child (ref), LocalPlayer (ref), HumanoidRootPart (ref)
+					if child:FindFirstChild("Owner").Value == LocalPlayer then
+						local children = child:GetChildren()
+
+						for _, v in ipairs(children) do
+							if v:IsA("BasePart") then
+								v.CanCollide = false
+								v.CFrame = HumanoidRootPart.CFrame
+							end
+						end
+					end
+				end)
+			end
+
+			local ok = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items["Black Hole"]
+			end)
+			local ok9 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Gradient
+			end)
+			local ok10 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Nothing
+			end)
+			local t35 = {
+				[1] = "Black Hole"
+			}
+			local t36 = {
+				[1] = "Gradient"
+			}
+
+			if not ok or not ok9 or not ok10 then
+				if ok then
+					if not ok9 then
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t36))
+					end
+				else
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t35))
+				end
+			else
+				local t37 = {
+					[1] = {
+						["1"] = "Black Hole",
+						["5"] = "Gradient",
+						["8"] = "Nothing"
+					}
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(unpack(t37))
+			end
+
+			task.wait()
+		end
+
+		task.wait()
+	end
+end)
+
+local u57 = t1.Craft:AddToggle("EnableInventory", {
+	Title = "Auto Craft Speeding Ticket",
+	Description = "Needs 'Copito Rainbow' Unlocked",
+	Default = false
+})
+
+u57:OnChanged(function()
+	-- upvalues: u57 (ref), LocalPlayer (ref)
+	if not u57.Value then
+		_G.craft = false
+	else
+		_G.craft = true
+
+		while _G.craft do
+			local HumanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+			for _, child in pairs(workspace.Dropped:GetChildren()) do
+				pcall(function()
+					-- upvalues: child (ref), LocalPlayer (ref), HumanoidRootPart (ref)
+					if child:FindFirstChild("Owner").Value == LocalPlayer then
+						local children = child:GetChildren()
+
+						for _, v in ipairs(children) do
+							if v:IsA("BasePart") then
+								v.CanCollide = false
+								v.CFrame = HumanoidRootPart.CFrame
+							end
+						end
+					end
+				end)
+			end
+
+			local ok = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Denis
+			end)
+			local ok11 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Popo
+			end)
+			local ok12 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items["Sports Car"]
+			end)
+			local ok13 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items["Copito Rainbow"]
+			end)
+			local t38 = {
+				[1] = "Denis"
+			}
+			local t39 = {
+				[1] = "Popo"
+			}
+			local t40 = {
+				[1] = "Sports Car"
+			}
+			local t41 = {
+				[1] = "Copito Rainbow"
+			}
+
+			if not ok or not ok11 or not ok12 or not ok13 then
+				if ok then
+					if ok11 then
+						if ok12 then
+							if not ok13 then
+								game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t41))
+							end
+						else
+							game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t40))
+						end
+					else
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t39))
+					end
+				else
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t38))
+				end
+			else
+				local t42 = {
+					[1] = {
+						["1"] = "Denis",
+						["2"] = "Copito Rainbow",
+						["4"] = "Sports Car",
+						["5"] = "Popo"
+					}
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(unpack(t42))
+			end
+
+			task.wait()
+		end
+
+		task.wait()
+	end
+end)
+
+local u58 = t1.Craft:AddToggle("EnableInventory", {
+	Title = "Auto Craft Lizard Creature",
+	Default = false
+})
+
+u58:OnChanged(function()
+	-- upvalues: u58 (ref), LocalPlayer (ref)
+	if not u58.Value then
+		_G.craft = false
+	else
+		_G.craft = true
+
+		while _G.craft do
+			local HumanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+			for _, child in pairs(workspace.Dropped:GetChildren()) do
+				pcall(function()
+					-- upvalues: child (ref), LocalPlayer (ref), HumanoidRootPart (ref)
+					if child:FindFirstChild("Owner").Value == LocalPlayer then
+						local children = child:GetChildren()
+
+						for _, v in ipairs(children) do
+							if v:IsA("BasePart") then
+								v.CanCollide = false
+								v.CFrame = HumanoidRootPart.CFrame
+							end
+						end
+					end
+				end)
+			end
+
+			local ok = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.UFO
+			end)
+			local ok14 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Illuminati
+			end)
+			local t43 = {
+				[1] = "UFO"
+			}
+			local t44 = {
+				[1] = "Illuminati"
+			}
+
+			if not ok or not ok14 then
+				if ok then
+					if not ok14 then
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t44))
+					end
+				else
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t43))
+				end
+			else
+				local t45 = {
+					[1] = {
+						["3"] = "UFO",
+						["6"] = "Illuminati"
+					}
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(unpack(t45))
+			end
+
+			task.wait()
+		end
+
+		task.wait()
+	end
+end)
+
+local u59 = t1.Craft:AddToggle("EnableInventory", {
+	Title = "Auto Craft Demon Eye",
+	Default = false
+})
+
+u59:OnChanged(function()
+	-- upvalues: u59 (ref)
+	if not u59.Value then
+		_G.craft = false
+	else
+		_G.craft = true
+
+		while _G.craft do
+			local LocalPlayer11 = game:GetService("Players").LocalPlayer
+			local HumanoidRootPart = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			local ok, result = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Eye
+			end)
+			local ok15, result2 = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Fire
+			end)
+
+			if not ok or not ok15 or not (result2.value >= 1) or not (result.value >= 1) then
+				if ok or ok15 then
+					if ok then
+						if not ok15 then
+							local t46 = {
+								[1] = "Fire"
+							}
+
+							game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t46))
+						end
+					else
+						local t47 = {
+							[1] = "Eye"
+						}
+
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t47))
+					end
+				else
+					local t48 = {
+						[1] = "Eye"
+					}
+					local t49 = {
+						[1] = "Fire"
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t48))
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t49))
+				end
+			else
+				local t50 = {
+					[1] = {
+						["1"] = "Eye",
+						["2"] = "Fire"
+					}
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(unpack(t50));
+				(function()
+					-- upvalues: LocalPlayer11 (ref), HumanoidRootPart (ref)
+					local _, _ = pcall(function()
+						-- upvalues: LocalPlayer11 (ref), HumanoidRootPart (ref)
+						local v622 = workspace.Dropped["Demon Eye"]
+						local Owner = v622:FindFirstChild("Owner")
+
+						if Owner and Owner.Value == LocalPlayer11 then
+							local children = v622:GetChildren()
+
+							for _, v in ipairs(children) do
+								if v:IsA("BasePart") then
+									v.CFrame = HumanoidRootPart.CFrame
+									v.Anchored = true
+									v.CanCollide = false
+								end
+							end
+						end
+					end)
+				end)()
+			end
+
+			task.wait()
+		end
+
+		task.wait()
+	end
+end)
+
+local u60 = t1.Craft:AddToggle("EnableInventory", {
+	Title = "Auto Craft Beacon",
+	Default = false
+})
+
+u60:OnChanged(function()
+	-- upvalues: u60 (ref)
+	if not u60.Value then
+		_G.craftbeacon = false
+	else
+		_G.craftbeacon = true
+
+		while _G.craftbeacon do
+			local HumanoidRootPart = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			local _, _ = pcall(function()
+				-- upvalues: HumanoidRootPart (ref)
+				local LocalPlayer12 = game:GetService("Players").LocalPlayer
+				local ok, _ = pcall(function()
+					return game:GetService("Players").LocalPlayer.Items["Light Cube"]
+				end)
+				local ok16, _ = pcall(function()
+					return game:GetService("Players").LocalPlayer.Items["Shiny Thing"]
+				end)
+
+				if not ok or not ok16 then
+					if not ok16 then
+						local t51 = {
+							[1] = "Shiny Thing"
+						}
+
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t51))
+					end
+
+					if not ok then
+						local t52 = {
+							[1] = "Light Cube"
+						}
+
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t52))
+					end
+				else
+					local t53 = {
+						["2"] = "Light Cube",
+						["5"] = "Shiny Thing"
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(t53);
+					(function()
+						-- upvalues: LocalPlayer12 (ref), HumanoidRootPart (ref)
+						local _, _ = pcall(function()
+							-- upvalues: LocalPlayer12 (ref), HumanoidRootPart (ref)
+							local Beacon = workspace.Dropped.Beacon
+							local Owner = Beacon:FindFirstChild("Owner")
+
+							if Owner and Owner.Value == LocalPlayer12 then
+								local children = Beacon:GetChildren()
+
+								for _, v in ipairs(children) do
+									if v:IsA("BasePart") then
+										v.CFrame = HumanoidRootPart.CFrame
+										v.Anchored = true
+										v.CanCollide = false
+									end
+								end
+							end
+						end)
+					end)()
+					task.wait()
+				end
+			end)
+
+			task.wait()
+		end
+	end
+end)
+u60:SetValue(false)
+
+local u61 = t1.Craft:AddToggle("EnableInventory", {
+	Title = "Auto Craft Box Dimension",
+	Default = false
+})
+
+u61:OnChanged(function()
+	-- upvalues: u61 (ref), LocalPlayer (ref)
+	if not u61.Value then
+		_G.craftBox = false
+	else
+		_G.craftBox = true
+
+		local function u136()
+			-- upvalues: LocalPlayer (ref)
+			for _, child in ipairs(LocalPlayer.Character:GetChildren()) do
+				if child:IsA("Tool") then
+					child.Parent = LocalPlayer.Backpack
+				end
+			end
+		end
+
+		while _G.craftBox do
+			local HumanoidRootPart = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			local ok, _ = pcall(function()
+				-- upvalues: u136 (ref), HumanoidRootPart (ref)
+				local LocalPlayer13 = game:GetService("Players").LocalPlayer
+
+				u136()
+
+				local ok, _ = pcall(function()
+					return game:GetService("Players").LocalPlayer.Items["Portal Blue"]
+				end)
+				local ok17, _ = pcall(function()
+					return game:GetService("Players").LocalPlayer.Items["Power Ball"]
+				end)
+				local ok18, _ = pcall(function()
+					return game:GetService("Players").LocalPlayer.Items.Box
+				end)
+
+				if not ok or (not ok17 or not ok18) then
+					if not ok17 then
+						local t54 = {
+							[1] = "Power Ball"
+						}
+
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t54))
+					end
+
+					if not ok then
+						local t55 = {
+							[1] = "Portal Blue"
+						}
+
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t55))
+					end
+
+					if not ok18 then
+						local t56 = {
+							[1] = "Box"
+						}
+
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t56))
+					end
+				else
+					local t57 = {
+						["2"] = "Portal Blue",
+						["5"] = "Power Ball",
+						["8"] = "Box"
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(t57);
+					(function()
+						-- upvalues: LocalPlayer13 (ref), HumanoidRootPart (ref)
+						local _, _ = pcall(function()
+							-- upvalues: LocalPlayer13 (ref), HumanoidRootPart (ref)
+							local v646 = workspace.Dropped["Box Dimension"]
+							local Owner = v646:FindFirstChild("Owner")
+
+							if Owner and Owner.Value == LocalPlayer13 then
+								local children = v646:GetChildren()
+
+								for _, v in ipairs(children) do
+									if v:IsA("BasePart") then
+										v.CFrame = HumanoidRootPart.CFrame
+										v.Anchored = true
+										v.CanCollide = false
+									end
+								end
+							end
+						end)
+					end)()
+					task.wait()
+				end
+			end)
+
+			if not ok then
+			end
+
+			task.wait()
+		end
+	end
+end)
+u61:SetValue(false)
+
+local u62 = t1.Craft:AddToggle("EnableInventory", {
+	Title = "Auto Craft Radioactive Waste",
+	Default = false
+})
+
+u62:OnChanged(function()
+	-- upvalues: u62 (ref)
+	if not u62.Value then
+		_G.craft = false
+	else
+		_G.craft = true
+
+		while _G.craft do
+			local LocalPlayer14 = game:GetService("Players").LocalPlayer
+			local HumanoidRootPart = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			local ok, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Microwave
+			end)
+			local ok19, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items["Green Ooze"]
+			end)
+			local ok20, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Battery
+			end)
+
+			if not ok or not ok19 or not ok20 then
+				if ok or ok19 then
+					if ok then
+						if ok19 then
+							if not ok20 then
+								local t58 = {
+									[1] = "Battery"
+								}
+
+								game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t58))
+							end
+						else
+							local t59 = {
+								[1] = "Green Ooze"
+							}
+
+							game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t59))
+						end
+					else
+						local t60 = {
+							[1] = "Microwave"
+						}
+
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t60))
+					end
+				else
+					local t61 = {
+						[1] = "Microwave"
+					}
+					local t62 = {
+						[1] = "Green Ooze"
+					}
+					local t63 = {
+						[1] = "Battery"
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t61))
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t62))
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t63))
+				end
+			else
+				local t64 = {
+					[1] = {
+						["1"] = "Microwave",
+						["2"] = "Green Ooze",
+						["3"] = "Battery"
+					}
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(unpack(t64));
+				(function()
+					-- upvalues: LocalPlayer14 (ref), HumanoidRootPart (ref)
+					local _, _ = pcall(function()
+						-- upvalues: LocalPlayer14 (ref), HumanoidRootPart (ref)
+						local v627 = workspace.Dropped["Radioactive Waste"]
+						local Owner = v627:FindFirstChild("Owner")
+
+						if Owner and Owner.Value == LocalPlayer14 then
+							local children = v627:GetChildren()
+
+							for _, v in ipairs(children) do
+								if v:IsA("BasePart") then
+									v.CFrame = HumanoidRootPart.CFrame
+									v.Anchored = true
+									v.CanCollide = false
+								end
+							end
+						end
+					end)
+				end)()
+			end
+
+			task.wait()
+		end
+
+		task.wait()
+	end
+end)
+
+local u63 = t1.Craft:AddToggle("EnableInventory", {
+	Title = "Auto Craft Cheese Pizza",
+	Default = false
+})
+
+u63:OnChanged(function()
+	-- upvalues: u63 (ref)
+	if not u63.Value then
+		_G.craft = false
+	else
+		_G.craft = true
+
+		while _G.craft do
+			local LocalPlayer15 = game:GetService("Players").LocalPlayer
+			local HumanoidRootPart = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			local ok, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Flour
+			end)
+			local ok21, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items["Water Bottle"]
+			end)
+			local ok22, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items["Gold Bar"]
+			end)
+			local ok23, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Dough
+			end)
+			local ok24, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Tomato
+			end)
+
+			if not ok or not ok21 or not ok22 or not ok23 or not ok24 then
+				local t65 = {}
+
+				if not ok then
+					table.insert(t65, "Flour")
+				end
+
+				if not ok21 then
+					table.insert(t65, "Water Bottle")
+				end
+
+				if not ok22 then
+					table.insert(t65, "Gold Bar")
+				end
+
+				if not ok23 then
+					table.insert(t65, "Dough")
+				end
+
+				if not ok24 then
+					table.insert(t65, "Tomato")
+				end
+
+				for _, v in ipairs(t65) do
+					local t66 = {
+						[1] = v
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t66))
+				end
+			else
+				local t67 = {
+					[1] = {
+						["1"] = "Flour",
+						["4"] = "Water Bottle",
+						["5"] = "Gold Bar",
+						["8"] = "Dough",
+						["9"] = "Tomato"
+					}
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(unpack(t67));
+				(function()
+					-- upvalues: LocalPlayer15 (ref), HumanoidRootPart (ref)
+					local _, _ = pcall(function()
+						-- upvalues: LocalPlayer15 (ref), HumanoidRootPart (ref)
+						local v632 = workspace.Dropped["Cheese Pizza"]
+						local Owner = v632:FindFirstChild("Owner")
+
+						if Owner and Owner.Value == LocalPlayer15 then
+							local children = v632:GetChildren()
+
+							for _, v in ipairs(children) do
+								if v:IsA("BasePart") then
+									v.CFrame = HumanoidRootPart.CFrame
+									v.Anchored = true
+									v.CanCollide = false
+								end
+							end
+						end
+					end)
+				end)()
+			end
+
+			task.wait()
+		end
+	end
+end)
+
+local u64 = t1.Craft:AddToggle("EnableInventory", {
+	Title = "Auto Craft Pepperoni Pizza",
+	Default = false
+})
+
+u64:OnChanged(function()
+	-- upvalues: u64 (ref)
+	if not u64.Value then
+		_G.craft = false
+	else
+		_G.craft = true
+
+		while _G.craft do
+			local LocalPlayer16 = game:GetService("Players").LocalPlayer
+			local HumanoidRootPart = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			local ok, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Flour
+			end)
+			local ok25, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items["Water Bottle"]
+			end)
+			local ok26, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items["Piggy Head"]
+			end)
+			local ok27, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Dough
+			end)
+			local ok28, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Tomato
+			end)
+
+			if not ok or not ok25 or not ok26 or not ok27 or not ok28 then
+				local t68 = {}
+
+				if not ok then
+					table.insert(t68, "Flour")
+				end
+
+				if not ok25 then
+					table.insert(t68, "Water Bottle")
+				end
+
+				if not ok26 then
+					table.insert(t68, "Piggy Head")
+				end
+
+				if not ok27 then
+					table.insert(t68, "Dough")
+				end
+
+				if not ok28 then
+					table.insert(t68, "Tomato")
+				end
+
+				for _, v in ipairs(t68) do
+					local t69 = {
+						[1] = v
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t69))
+				end
+			else
+				local t70 = {
+					[1] = {
+						["1"] = "Flour",
+						["4"] = "Water Bottle",
+						["5"] = "Piggy Head",
+						["8"] = "Dough",
+						["9"] = "Tomato"
+					}
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(unpack(t70));
+				(function()
+					-- upvalues: LocalPlayer16 (ref), HumanoidRootPart (ref)
+					local _, _ = pcall(function()
+						-- upvalues: LocalPlayer16 (ref), HumanoidRootPart (ref)
+						local v615 = workspace.Dropped["Pepperoni Pizza"]
+						local Owner = v615:FindFirstChild("Owner")
+
+						if Owner and Owner.Value == LocalPlayer16 then
+							local children = v615:GetChildren()
+
+							for _, v in ipairs(children) do
+								if v:IsA("BasePart") then
+									v.CFrame = HumanoidRootPart.CFrame
+									v.Anchored = true
+									v.CanCollide = false
+								end
+							end
+						end
+					end)
+				end)()
+			end
+
+			task.wait()
+		end
+	end
+end)
+
+local u65 = t1.Craft:AddToggle("EnableInventory", {
+	Title = "Auto Craft Hawaiian Pizza",
+	Default = false
+})
+
+u65:OnChanged(function()
+	-- upvalues: u65 (ref)
+	if not u65.Value then
+		_G.craft = false
+	else
+		_G.craft = true
+
+		while _G.craft do
+			local LocalPlayer17 = game:GetService("Players").LocalPlayer
+			local HumanoidRootPart = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			local ok, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Flour
+			end)
+			local ok29, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items["Water Bottle"]
+			end)
+			local ok30, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Dough
+			end)
+			local ok31, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Tomato
+			end)
+			local ok32, _ = pcall(function()
+				return game:GetService("Players").LocalPlayer.Items.Pineapple
+			end)
+
+			if not ok or not ok29 or not ok30 or not ok31 or not ok32 then
+				local t71 = {}
+
+				if not ok then
+					table.insert(t71, "Flour")
+				end
+
+				if not ok29 then
+					table.insert(t71, "Water Bottle")
+				end
+
+				if not ok30 then
+					table.insert(t71, "Dough")
+				end
+
+				if not ok31 then
+					table.insert(t71, "Tomato")
+				end
+
+				if not ok32 then
+					table.insert(t71, "Pineapple")
+				end
+
+				for _, v in ipairs(t71) do
+					local t72 = {
+						[1] = v
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t72))
+				end
+			else
+				local t73 = {
+					[1] = {
+						["1"] = "Flour",
+						["2"] = "Water Bottle",
+						["3"] = "Dough",
+						["4"] = "Tomato",
+						["5"] = "Pineapple"
+					}
+				}
+
+				game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(unpack(t73));
+				(function()
+					-- upvalues: LocalPlayer17 (ref), HumanoidRootPart (ref)
+					local _, _ = pcall(function()
+						-- upvalues: LocalPlayer17 (ref), HumanoidRootPart (ref)
+						local v637 = workspace.Dropped["Hawaiian Pizza"]
+						local Owner = v637:FindFirstChild("Owner")
+
+						if Owner and Owner.Value == LocalPlayer17 then
+							local children = v637:GetChildren()
+
+							for _, v in ipairs(children) do
+								if v:IsA("BasePart") then
+									v.CFrame = HumanoidRootPart.CFrame
+									v.Anchored = true
+									v.CanCollide = false
+								end
+							end
+						end
+					end)
+				end)()
+			end
+
+			task.wait()
+		end
+	end
+end)
+
+local u66 = t1.Craft:AddToggle("EnableInventory", {
+	Title = "Auto Craft Skibidi Toilet",
+	Default = false
+})
+
+u66:OnChanged(function()
+	-- upvalues: u66 (ref)
+	if not u66.Value then
+		_G.craft = false
+	else
+		_G.craft = true
+
+		while _G.craft do
+			local HumanoidRootPart = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			local _, _ = pcall(function()
+				-- upvalues: HumanoidRootPart (ref)
+				local LocalPlayer18 = game:GetService("Players").LocalPlayer
+				local ok, _ = pcall(function()
+					return game:GetService("Players").LocalPlayer.Items["a head"]
+				end)
+				local ok33, _ = pcall(function()
+					return game:GetService("Players").LocalPlayer.Items["Radioactive Waste"]
+				end)
+				local ok34, _ = pcall(function()
+					return game:GetService("Players").LocalPlayer.Items.Toilet
+				end)
+				local ok35, _ = pcall(function()
+					return game:GetService("Players").LocalPlayer.Items.Microwave
+				end)
+				local ok36, _ = pcall(function()
+					return game:GetService("Players").LocalPlayer.Items["Green Ooze"]
+				end)
+				local ok37, _ = pcall(function()
+					return game:GetService("Players").LocalPlayer.Items.Battery
+				end)
+
+				if not ok or (not ok33 or not ok34) then
+					if not ok33 then
+						if not ok35 then
+							local t74 = {
+								[1] = "Microwave"
+							}
+
+							game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t74))
+						end
+
+						if not ok36 then
+							local t75 = {
+								[1] = "Green Ooze"
+							}
+
+							game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t75))
+						end
+
+						if not ok37 then
+							local t76 = {
+								[1] = "Battery"
+							}
+
+							game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t76))
+						end
+
+						local t77 = {
+							[1] = {
+								["1"] = "Microwave",
+								["2"] = "Green Ooze",
+								["3"] = "Battery"
+							}
+						}
+
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(unpack(t77));
+						(function()
+							-- upvalues: LocalPlayer18 (ref), HumanoidRootPart (ref)
+							local _, _ = pcall(function()
+								-- upvalues: LocalPlayer18 (ref), HumanoidRootPart (ref)
+								local v661 = workspace.Dropped["Radioactive Waste"]
+								local Owner = v661:FindFirstChild("Owner")
+
+								if Owner and Owner.Value == LocalPlayer18 then
+									local children = v661:GetChildren()
+
+									for _, v in ipairs(children) do
+										if v:IsA("BasePart") then
+											v.CFrame = HumanoidRootPart.CFrame
+											v.Anchored = true
+											v.CanCollide = false
+										end
+									end
+								end
+							end)
+						end)()
+					end
+
+					if not ok then
+						local t78 = {
+							[1] = "a head"
+						}
+
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t78))
+					end
+
+					if not ok34 then
+						local t79 = {
+							[1] = "Toilet"
+						}
+
+						game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t79))
+					end
+				else
+					local t80 = {
+						["2"] = "a head",
+						["5"] = "Radioactive Waste",
+						["8"] = "Toilet"
+					}
+
+					game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("Craft"):InvokeServer(t80);
+					(function()
+						-- upvalues: LocalPlayer18 (ref), HumanoidRootPart (ref)
+						local _, _ = pcall(function()
+							-- upvalues: LocalPlayer18 (ref), HumanoidRootPart (ref)
+							local v656 = workspace.Dropped["Skibidi Toilet"]
+							local Owner = v656:FindFirstChild("Owner")
+
+							if Owner and Owner.Value == LocalPlayer18 then
+								local children = v656:GetChildren()
+
+								for _, v in ipairs(children) do
+									if v:IsA("BasePart") then
+										v.CFrame = HumanoidRootPart.CFrame
+										v.Anchored = true
+										v.CanCollide = false
+									end
+								end
+							end
+						end)
+					end)()
+					task.wait()
+				end
+			end)
+
+			task.wait()
+		end
+	end
+end)
+t1.Craft:AddSection("Buy Craft/Robux Items")
+
+local u67 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Green Ooze",
+	Default = false
+})
+
+u67:OnChanged(function()
+	-- upvalues: u67 (ref)
+	while u67.Value do
+		local t81 = {
+			[1] = "Green Ooze"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t81))
+		task.wait()
+	end
+end)
+u67:SetValue(false)
+
+local u68 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Box Toy Box Toy",
+	Default = false
+})
+
+u68:OnChanged(function()
+	-- upvalues: u68 (ref)
+	while u68.Value do
+		local t82 = {
+			[1] = "Box Toy Box Toy"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t82))
+		task.wait()
+	end
+end)
+u68:SetValue(false)
+
+local u69 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Noob Box",
+	Default = false
+})
+
+u69:OnChanged(function()
+	-- upvalues: u69 (ref)
+	while u69.Value do
+		local t83 = {
+			[1] = "Box Toy Noob"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t83))
+		task.wait()
+	end
+end)
+u69:SetValue(false)
+
+local u70 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Lem Box",
+	Default = false
+})
+
+u70:OnChanged(function()
+	-- upvalues: u70 (ref)
+	while u70.Value do
+		local t84 = {
+			[1] = "Box Toy Lem"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t84))
+		task.wait()
+	end
+end)
+u70:SetValue(false)
+
+local u71 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy SandMan Box",
+	Default = false
+})
+
+u71:OnChanged(function()
+	-- upvalues: u71 (ref)
+	while u71.Value do
+		local t85 = {
+			[1] = "Box Toy SandMan"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t85))
+		task.wait()
+	end
+end)
+u71:SetValue(false)
+
+local u72 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Sanic Box",
+	Default = false
+})
+
+u72:OnChanged(function()
+	-- upvalues: u72 (ref)
+	while u72.Value do
+		local t86 = {
+			[1] = "Box Toy Sanic"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t86))
+		task.wait()
+	end
+end)
+u72:SetValue(false)
+
+local u73 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy House Box",
+	Default = false
+})
+
+u73:OnChanged(function()
+	-- upvalues: u73 (ref)
+	while u73.Value do
+		local t87 = {
+			[1] = "Box Toy  House"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t87))
+		task.wait()
+	end
+end)
+u73:SetValue(false)
+
+local u74 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Egg Box",
+	Default = false
+})
+
+u74:OnChanged(function()
+	-- upvalues: u74 (ref)
+	while u74.Value do
+		local t88 = {
+			[1] = "Box Toy Egg"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t88))
+		task.wait()
+	end
+end)
+u74:SetValue(false)
+
+local u75 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Air Box",
+	Default = false
+})
+
+u75:OnChanged(function()
+	-- upvalues: u75 (ref)
+	while u75.Value do
+		local t89 = {
+			[1] = "Box Toy Air"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t89))
+		task.wait()
+	end
+end)
+u75:SetValue(false)
+
+local u76 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Harambe Box",
+	Default = false
+})
+
+u76:OnChanged(function()
+	-- upvalues: u76 (ref)
+	while u76.Value do
+		local t90 = {
+			[1] = "Box Toy Harambe"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t90))
+		task.wait()
+	end
+end)
+u76:SetValue(false)
+
+local u77 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Rainbow Star",
+	Default = false
+})
+
+u77:OnChanged(function()
+	-- upvalues: u77 (ref)
+	while u77.Value do
+		local t91 = {
+			[1] = "Rainbow Star"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t91))
+		task.wait()
+	end
+end)
+u77:SetValue(false)
+
+local u78 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Helloshi",
+	Default = false
+})
+
+u78:OnChanged(function()
+	-- upvalues: u78 (ref)
+	while u78.Value do
+		local t92 = {
+			[1] = "Helloshi"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t92))
+		task.wait()
+	end
+end)
+u78:SetValue(false)
+
+local u79 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Gold Coin",
+	Default = false
+})
+
+u79:OnChanged(function()
+	-- upvalues: u79 (ref)
+	while u79.Value do
+		local t93 = {
+			[1] = "Gold Coin"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t93))
+		task.wait()
+	end
+end)
+u79:SetValue(false)
+
+local u80 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Omb Bomb",
+	Default = false
+})
+
+u80:OnChanged(function()
+	-- upvalues: u80 (ref)
+	while u80.Value do
+		local t94 = {
+			[1] = "Omb Bomb"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t94))
+		task.wait()
+	end
+end)
+u80:SetValue(false)
+
+local u81 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Heart Lightstick",
+	Default = false
+})
+
+u81:OnChanged(function()
+	-- upvalues: u81 (ref)
+	while u81.Value do
+		local t95 = {
+			[1] = "Heart Lightstick"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t95))
+		task.wait()
+	end
+end)
+u81:SetValue(false)
+
+local u82 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Heart Balloon",
+	Default = false
+})
+
+u82:OnChanged(function()
+	-- upvalues: u82 (ref)
+	while u82.Value do
+		local t96 = {
+			[1] = "Heart Balloon"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t96))
+		task.wait()
+	end
+end)
+u82:SetValue(false)
+
+local u83 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Heart Gift",
+	Default = false
+})
+
+u83:OnChanged(function()
+	-- upvalues: u83 (ref)
+	while u83.Value do
+		local t97 = {
+			[1] = "Heart Gift"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t97))
+		task.wait()
+	end
+end)
+u83:SetValue(false)
+
+local u84 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Heart Headphones",
+	Default = false
+})
+
+u84:OnChanged(function()
+	-- upvalues: u84 (ref)
+	while u84.Value do
+		local t98 = {
+			[1] = "Heart Headphones"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t98))
+		task.wait()
+	end
+end)
+u84:SetValue(false)
+
+local u85 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Heart Light",
+	Default = false
+})
+
+u85:OnChanged(function()
+	-- upvalues: u85 (ref)
+	while u85.Value do
+		local t99 = {
+			[1] = "Heart Light"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t99))
+		task.wait()
+	end
+end)
+u85:SetValue(false)
+
+local u86 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Corazón Cake",
+	Default = false
+})
+
+u86:OnChanged(function()
+	-- upvalues: u86 (ref)
+	while u86.Value do
+		local t100 = {
+			[1] = "Corazón Cake"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t100))
+		task.wait()
+	end
+end)
+u86:SetValue(false)
+
+local u87 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy A",
+	Default = false
+})
+
+u87:OnChanged(function()
+	-- upvalues: u87 (ref)
+	while u87.Value do
+		local t101 = {
+			[1] = "A"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t101))
+		task.wait()
+	end
+end)
+u87:SetValue(false)
+
+local u88 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy B",
+	Default = false
+})
+
+u88:OnChanged(function()
+	-- upvalues: u88 (ref)
+	while u88.Value do
+		local t102 = {
+			[1] = "B"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t102))
+		task.wait()
+	end
+end)
+u88:SetValue(false)
+
+local u89 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy C",
+	Default = false
+})
+
+u89:OnChanged(function()
+	-- upvalues: u89 (ref)
+	while u89.Value do
+		local t103 = {
+			[1] = "C"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t103))
+		task.wait()
+	end
+end)
+u89:SetValue(false)
+
+local u90 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy D",
+	Default = false
+})
+
+u90:OnChanged(function()
+	-- upvalues: u90 (ref)
+	while u90.Value do
+		local t104 = {
+			[1] = "D"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t104))
+		task.wait()
+	end
+end)
+u90:SetValue(false)
+
+local u91 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy E",
+	Default = false
+})
+
+u91:OnChanged(function()
+	-- upvalues: u91 (ref)
+	while u91.Value do
+		local t105 = {
+			[1] = "E"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t105))
+		task.wait()
+	end
+end)
+u91:SetValue(false)
+
+local u92 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy F",
+	Default = false
+})
+
+u92:OnChanged(function()
+	-- upvalues: u92 (ref)
+	while u92.Value do
+		local t106 = {
+			[1] = "F"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t106))
+		task.wait()
+	end
+end)
+u92:SetValue(false)
+
+local u93 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Tix Tox",
+	Default = false
+})
+
+u93:OnChanged(function()
+	-- upvalues: u93 (ref)
+	while u93.Value do
+		local t107 = {
+			[1] = "Tix Tox"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t107))
+		task.wait()
+	end
+end)
+u93:SetValue(false)
+
+local u94 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Tweet",
+	Default = false
+})
+
+u94:OnChanged(function()
+	-- upvalues: u94 (ref)
+	while u94.Value do
+		local t108 = {
+			[1] = "Tweet"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t108))
+		task.wait()
+	end
+end)
+u94:SetValue(false)
+
+local u95 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Inxta",
+	Default = false
+})
+
+u95:OnChanged(function()
+	-- upvalues: u95 (ref)
+	while u95.Value do
+		local t109 = {
+			[1] = "Inxta"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t109))
+		task.wait()
+	end
+end)
+u95:SetValue(false)
+
+local u96 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Silver Trophy",
+	Default = false
+})
+
+u96:OnChanged(function()
+	-- upvalues: u96 (ref)
+	while u96.Value do
+		local t110 = {
+			[1] = "Silver"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t110))
+		task.wait()
+	end
+end)
+u96:SetValue(false)
+
+local u97 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Hellow Catty",
+	Default = false
+})
+
+u97:OnChanged(function()
+	-- upvalues: u97 (ref)
+	while u97.Value do
+		local t111 = {
+			[1] = "Hellow Catty"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t111))
+		task.wait()
+	end
+end)
+u97:SetValue(false)
+
+local u98 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Hello Scary",
+	Default = false
+})
+
+u98:OnChanged(function()
+	-- upvalues: u98 (ref)
+	while u98.Value do
+		local t112 = {
+			[1] = "Hello Scary"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t112))
+		task.wait()
+	end
+end)
+u98:SetValue(false)
+
+local u99 = t1.Craft:AddToggle("AutoBuy", {
+	Title = "Auto Buy Hello Snow",
+	Default = false
+})
+
+u99:OnChanged(function()
+	-- upvalues: u99 (ref)
+	while u99.Value do
+		local t113 = {
+			[1] = "Hello Snow"
+		}
+
+		game:GetService("ReplicatedStorage"):WaitForChild("RemoteEvents"):WaitForChild("BuyItemCash"):FireServer(unpack(t113))
+		task.wait()
+	end
+end)
+u99:SetValue(false)
+
+function remove()
+	local LocalPlayer19 = game:GetService("Players").LocalPlayer
+
+	for _, descendant in pairs(LocalPlayer19:FindFirstChildOfClass("Backpack"):GetDescendants()) do
+		if descendant:IsA("Tool") or descendant:IsA("HopperBin") then
+			descendant:Destroy()
+		end
+	end
+
+	for _, descendant in pairs(LocalPlayer19.Character:GetDescendants()) do
+		if descendant:IsA("Tool") or descendant:IsA("HopperBin") then
+			descendant:Destroy()
+		end
+	end
+end
+
+local n8 = 0
+local u101 = t1.Updates:AddParagraph({
+	Title = "Time: 0:00:00"
+})
+
+task.spawn(function()
+	-- upvalues: n8 (ref), u101 (ref)
+	while true do
+		local v180 = math.floor(n8 / 3600)
+		local v181 = math.floor(n8 % 3600 / 60)
+		local v182 = n8 % 60
+
+		u101:SetTitle(string.format("Time: %d:%02d:%02d", v180, v181, v182))
+		n8 = n8 + 1
+		task.wait(1)
+	end
+end)
+t1.Updates:AddParagraph({
+	Title = "Made By 1xyzz",
+	Content = ""
+})
+t1.Updates:AddButton({
+	Title = "Discord Server",
+	Description = "Copies Discord Invite Link",
+	Callback = function()
+		-- upvalues: u1 (ref)
+		setclipboard("https://discord.gg/44PHnFKxq5")
+		u1:Notify({
+			Title = "Uni Hub",
+			Content = "Copied Successfuly",
+			Duration = 2
+		})
+	end
+})
+t1.Updates:AddButton({
+	Title = "Run Infinite Yield",
+	Callback = function()
+		loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+	end
+})
+t1.Updates:AddSection("Auto")
+t1.Updates:AddParagraph({
+	Title = "Anti Afk ✅",
+	Content = ""
+})
+t1.Updates:AddParagraph({
+	Title = "Anti Slender ✅",
+	Content = ""
+})
+t1.Updates:AddParagraph({
+	Title = "Anti Void ✅",
+	Content = ""
+})
+loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+u10:SelectTab(1)
+
+local Uni = game.CoreGui:FindFirstChild("Uni")
+
+if Uni then
+	Uni:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+
+ScreenGui.Name = "Uni"
+ScreenGui.Parent = game.CoreGui
+
+local ImageButton = Instance.new("ImageButton")
+
+ImageButton.Name = "ToggleUiXBX"
+ImageButton.Image = game:GetService("GroupService"):GetGroupInfoAsync(11980804).EmblemUrl
+ImageButton.BackgroundTransparency = 1
+ImageButton.Size = UDim2.new(0, 50, 0, 50)
+ImageButton.Position = UDim2.new(0, 510, 0, 40)
+ImageButton.Parent = ScreenGui
+ImageButton.Draggable = true
+
+local u105 = true
+
+ImageButton.MouseButton1Click:Connect(function()
+	-- upvalues: u105 (ref), u10 (ref)
+	u105 = not u105
+
+	if not u105 then
+		u10:Minimize()
+	else
+		u10:Minimize()
+	end
+end)
+game.Players.localPlayer.XRay.Value = true
+
+local VirtualUser = game:GetService("VirtualUser")
+
+game:GetService("Players").LocalPlayer.Idled:connect(function()
+	-- upvalues: VirtualUser (ref)
+	VirtualUser:CaptureController()
+	VirtualUser:ClickButton2(Vector2.new())
+end)
+game:GetService("Workspace").FallenPartsDestroyHeight = math.huge - math.huge
+
+local u107 = ReplicatedStorage.NPCs:FindFirstChild("Slender Man")
+
+_G.antislender = true
+
+while _G.antislender do
+	(function()
+		-- upvalues: u107 (ref)
+		if u107 then
+			u107:Destroy()
+		end
+
+		u107 = game:GetService("Workspace"):FindFirstChild("Slender Man")
+
+		if u107 then
+			u107:Destroy()
+		end
+	end)()
+	task.wait()
+end
